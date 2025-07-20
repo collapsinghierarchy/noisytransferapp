@@ -7,7 +7,7 @@ A simple peer‑to‑peer encrypted transfer built with **Quasar** (Vue.js) on t
 * **Index Page**: Choose if you want to send a file yourself or to request a file from someone else.
 * **Send Page**: Encrypt and send e2ee data blobs over WebSockets.
 * **Receive Page**: Prepare everything for others to send you e2ee files.
-* **WebSocket communication**: Single `/ws?appID=…` handshake, then bidirectional messaging. The e2ee is realized via hybrid HPKEs from [hpke-js](https://github.com/dajiaji/hpke-js), a Short Authentication String (SAS) and a commit-then-reveal protocol to protect against a savvy MitM. (Documentation is ONW)
+* **WebSocket communication**: Single `/ws?appID=…` handshake, then bidirectional messaging. The e2ee is realized via hybrid HPKEs (PQC) from [hpke-js](https://github.com/dajiaji/hpke-js), a Short Authentication String (SAS) and a commit-then-reveal protocol to protect against a savvy MitM. (Documentation is ONW)
 
 ## Repository Structure
 
