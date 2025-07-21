@@ -1,7 +1,7 @@
 services:
   pwa:
     build:
-      context: .
+      context: ./web
       dockerfile: Dockerfile
       args:
         - VITE_WS_URL=${VITE_WS_URL}

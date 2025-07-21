@@ -12,7 +12,7 @@ const suite = () => new CipherSuite({
 })
 
 const WS_BASE = import.meta.env.VITE_WS_URL || (
-  "ws://" + 'localhost:1234'
+  "wss://" + 'pseudocrypt.site'
 )
 
 // ---- Base‑64 helpers (URL‑safe tolerant) --------------------------

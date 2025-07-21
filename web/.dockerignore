@@ -1,0 +1,18 @@
+# Ignore everything…
+**
+
+# …except these files & directories:
+!Dockerfile
+!package.json
+!package-lock.json
+!quasar.config.js
+!nginx.conf
+!eslint.config.js
+!index.html
+!jsconfig.json
+!postcss.config.js
+
+# Keep your actual source:
+!src/
+!src-pwa/
+!public/
