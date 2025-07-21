@@ -1,0 +1,19 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  pwa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_WS_URL=${VITE_WS_URL}
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # put your cert+key in ./certs/fullchain.pem and ./certs/privkey.pem
+      - ./certs:/etc/nginx/certs:ro
+    restart: unless-stopped
