@@ -1,6 +1,6 @@
 # NoisyTransfer App
 
-A simple peer‑to‑peer encrypted transfer built with **Quasar** (Vue.js) on the frontend and a Go WebSocket backend [noisytransfer](https://github.com/collapsinghierarchy/noisytransfer). Users share a UUID `appId` to join a room and send e2ee data in real time.
+A simple e2e encrypted transfer built with **Quasar** (Vue.js) on the frontend and a Go WebSocket backend [noisytransfer](https://github.com/collapsinghierarchy/noisytransfer). Users share a UUID `appId` to join a room and send e2ee data in real time.
 
 ## Features
 
