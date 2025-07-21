@@ -51,7 +51,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import EssentialLink from 'components/EssentialLink.vue'
 
 // List of links shown in the drawer
