@@ -12,7 +12,7 @@ const suite = () => new CipherSuite({
 })
 
 const WS_BASE = import.meta.env.VITE_WS_URL || (
-  (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + 'localhost' + ':1234'
+  "ws://" + 'localhost:1234'
 )
 
 // ---- Base‑64 helpers (URL‑safe tolerant) --------------------------
@@ -67,7 +67,7 @@ function saveBlob (chunks, name) {
  *********************************/
 
 /* ------------------------------------------------------------------
- *  SENDER - Uses receiver's PK for all encryptions
+ *  SENDER - Uses receiver's ephemeral PK for all encryptions
  * ---------------------------------------------------------------- */
 export async function senderFlow (
   router,
@@ -84,11 +84,26 @@ export async function senderFlow (
 ) {
   const ws = new WebSocket(`${WS_BASE}/ws?appID=${channelID}`)
   ws.addEventListener('error', onError)
-  
   try {
-    await new Promise(res => ws.addEventListener('open', res))
-    onShareLink(`${location.origin}/#/request/${channelID}`)
 
+  // 1) Signal “I’m here” to the receiver
+  await new Promise(res => ws.addEventListener('open', res))
+  onShareLink(`${location.origin}/#/receive/${channelID}`)
+
+  // 2) Wait exactly once for the server’s peer‑join event
+  await new Promise(resolve => {
+    const listener = ev => {
+      const msg = JSON.parse(ev.data)
+      if (msg.type === 'room_full') {
+        ws.removeEventListener('message', listener)
+        resolve()
+      }
+    }
+    ws.addEventListener('message', listener)
+  })
+
+
+   // 3) Now wait for the receiver’s commitment…
     let receiverCommit = null
     let nonceA = null
     let receiverPub = null
@@ -199,7 +214,7 @@ export async function senderFlow (
 }
 
 /* ------------------------------------------------------------------
- *  RECEIVER - Generates single key pair for session
+ *  RECEIVER - Generates an ephemeral key pair for session
  * ---------------------------------------------------------------- */
 export async function receiverFlow (
   router,
@@ -217,11 +232,24 @@ export async function receiverFlow (
   try {
     await new Promise(res => ws.addEventListener('open', res))
 
+    // Wait exactly once for the server’s peer‑join event
+    await new Promise(resolve => {
+      const listener = ev => {
+        const msg = JSON.parse(ev.data)
+        if (msg.type === 'room_full') {
+          ws.removeEventListener('message', listener)
+          resolve()
+        }
+      }
+      ws.addEventListener('message', listener)
+    })
+
+
     // Receiver generates key pair and nonce
     const { pub: pkB, priv: skBcrypto } = await keypairB64()
     const nonceB = crypto.getRandomValues(new Uint8Array(16))
-    
-    // Phase 1: Send commitment
+
+    // Phase 1: Wait for sender's nonce
     const commitment = b64(await sha256(enc(pkB + b64(nonceB))))
     ws.send(JSON.stringify({ type: 'commit', commit: commitment }))
 
@@ -268,7 +296,7 @@ export async function receiverFlow (
         ws.send(JSON.stringify({ type: 'rcvconfirm' }))
         return
       }
-      
+
       // Handle sender confirmation
       if (msg.type === 'sndconfirm') {
         sndConfirmReceived = true

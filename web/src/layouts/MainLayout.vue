@@ -1,5 +1,6 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="hHh lpR fFf">
+    <!-- Header with Menu, Title, Home Button, and Version -->
     <q-header elevated>
       <q-toolbar>
         <q-btn
@@ -11,23 +12,23 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title>
+        <q-toolbar-title class="cursor-pointer" @click="goHome">
           Noisytransfer
         </q-toolbar-title>
 
-        <div>Noisytransfer v0.1.0</div>
+        <div class="q-ml-md">v0.1.0</div>
       </q-toolbar>
     </q-header>
 
+    <!-- Drawer is now collapsed by default (no show-if-above) -->
     <q-drawer
       v-model="leftDrawerOpen"
-      show-if-above
       bordered
+      behavior="mobile"
+      overlay
     >
       <q-list>
-        <q-item-label
-          header
-        >
+        <q-item-label header>
           Essential Links
         </q-item-label>
 
@@ -42,26 +43,36 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+    <q-footer class="text-center">
+      2025 White Noise, encproc@gmail.com
+    </q-footer>
   </q-layout>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import EssentialLink from 'components/EssentialLink.vue'
 
+// List of links shown in the drawer
 const linksList = [
   {
     title: 'Docs',
     caption: 'TBD',
     icon: 'school'
-   // link: 'https://quasar.dev'
   },
   {
-    title: 'Github Source Code',
-    caption: 'github.com/collapsinghierarchy/noisytransfer',
+    title: 'Github Back-End',
+    caption: 'collapsinghierarchy/noisytransfer',
     icon: 'code',
     link: 'https://github.com/collapsinghierarchy/noisytransfer'
   },
+  {
+    title: 'Github PWA',
+    caption: 'collapsinghierarchy/noisytransferapp',
+    icon: 'code',
+    link: 'https://github.com/collapsinghierarchy/noisytransferapp'
+  }
 ]
 
 const leftDrawerOpen = ref(false)
@@ -69,4 +80,9 @@ const leftDrawerOpen = ref(false)
 function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
+
 </script>
+
+<style scoped>
+/* Optional: adjust drawer width when open */
+</style>

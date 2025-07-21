@@ -31,6 +31,10 @@
       </template>
     </q-input>
 
+    <div v-if="shareLink" class="q-mt-lg text-center">
+      <qrcode-vue :value="shareLink" :size="150" />
+    </div>
+
     <!-- SAS dialog -->
     <q-dialog :model-value="showSasDialog" persistent>
       <q-card class="sas-card q-pa-lg">
@@ -46,7 +50,7 @@
     </q-dialog>
 
     <q-linear-progress
-      v-if="progress>=0"
+      v-if="progress >= 0"
       :value="progress"
       color="primary"
       class="full-width app-progress"
@@ -59,24 +63,29 @@ import { ref, watch, computed } from 'vue'
 import { Notify, copyToClipboard } from 'quasar'
 import { senderFlow } from 'src/lib/noise.js'
 import { useRouter } from 'vue-router'
+import QrcodeVue from 'qrcode.vue'
 
-const router      = useRouter()
-const file        = ref(null)
-const shareLink   = ref('')
-const sas         = ref('')
-const progress    = ref(-1)
-const confirmed   = ref(false)
-const rejected    = ref(false)
+const router = useRouter()
+const file = ref(null)
+const shareLink = ref('')
+const sas = ref('')
+const progress = ref(-1)
+const confirmed = ref(false)
+const rejected = ref(false)
 
 const showSasDialog = computed(() => !!sas.value && !confirmed.value && !rejected.value)
 
-function confirmTransfer () { confirmed.value = true }
-function rejectTransfer  () { rejected.value = true; router.back() }
+function confirmTransfer() {
+  confirmed.value = true
+}
+function rejectTransfer() {
+  rejected.value = true
+  router.back()
+}
 
-async function startSend () {
+async function startSend() {
   if (!file.value) return
   const channelID = crypto.randomUUID()
-
   senderFlow(router, file.value, channelID, {
     onShareLink: link => shareLink.value = link,
     onSAS: code => sas.value = code,
@@ -89,7 +98,7 @@ async function startSend () {
   })
 }
 
-async function copyLink () {
+async function copyLink() {
   await copyToClipboard(shareLink.value)
   Notify.create('Link copied')
 }

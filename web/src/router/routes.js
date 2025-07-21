@@ -11,7 +11,15 @@ const routes = [
       { path: 'send/:id?', component: () => import('pages/SendPage.vue') },
 
       // Request page (requires ID)
-      { path: 'request/:id', component: () => import('pages/RequestPage.vue') },
+      { path: 'receive/:id', component: () => import('pages/ReceivePage.vue') },
+      {
+        path: 'request',
+        component: () => import('pages/RequestPage.vue')
+      },
+      {
+        path: 'submit/:id',
+        component: () => import('pages/SubmitPage.vue')
+      },
     ]
   },
 

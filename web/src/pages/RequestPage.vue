@@ -1,14 +1,37 @@
 <template>
-  <q-page padding class="column items-center">
-    <h5 class="q-mb-md">Receive a File</h5>
+  <q-page padding class="column items-center q-pa-md">
+    <h5 class="q-mb-md">Request a File</h5>
 
-    <!-- SAS verification dialog -->
-    <q-dialog :model-value="showSasDialog" persistent>
-      <q-card class="sas-card q-pa-lg">
-        <q-card-section>
-          <div class="text-h6 text-center">Verify 6‑digit code</div>
-          <div class="text-h4 text-primary text-center q-mt-md">{{ sas }}</div>
-        </q-card-section>
+    <!-- Share Link and QR Code -->
+     <q-input
+      v-if="shareLink"
+      v-model="shareLink"
+      readonly
+      label="Share Link"
+      class="full-width app-input"
+    >
+      <template #append>
+        <q-btn flat dense icon="content_copy" @click="copyLink" />
+      </template>
+    </q-input>
+
+    <div v-if="shareLink" class="q-mt-lg text-center">
+      <qrcode-vue :value="shareLink" :size="150" />
+    </div>
+
+    <!-- Loading indicator before shareLink is ready -->
+    <div v-else class="column items-center q-gutter-md">
+      <q-spinner size="xl" color="primary" />
+      <div>Initializing request...</div>
+    </div>
+
+   <!-- SAS Verification Dialog -->
+   <q-dialog v-model="showSasDialog" persistent>
+     <q-card class="sas-card q-pa-lg">
+       <q-card-section class="text-center">
+         <div class="text-h6">Confirm 6‑digit code</div>
+         <div class="text-h4 text-primary q-mt-md">{{ sas }}</div>
+       </q-card-section>
         <q-card-actions align="around">
           <q-btn flat color="negative" label="Reject" @click="rejectTransfer" />
           <q-btn flat color="positive" label="Confirm" @click="confirmTransfer" />
@@ -16,90 +39,116 @@
       </q-card>
     </q-dialog>
 
-    <!-- progress bar while receiving -->
+    <!-- Progress Bar -->
     <q-linear-progress
-      v-if="progress >= 0 && !downloadUrl"
+      v-if="progress >= 0"
       :value="progress"
       color="primary"
-      class="full-width app-progress"
+      class="full-width q-mt-lg"
     />
 
-    <!-- download area -->
-    <div v-if="downloadUrl" class="column items-center q-mt-lg">
-      <div class="file-name">Saved as <b>{{ fileName }}</b></div>
+    <!-- Download Link on Done -->
+    <div v-if="done && fileUrl" class="column items-center q-gutter-md q-mt-lg">
       <q-btn
-        color="primary"
+        flat
         icon="download"
-        label="Download file"
-        class="q-mt-md"
-        :href="downloadUrl"
-        :download="fileName"
+        label="Download {{ fileName }}"
+        @click="downloadFile"
       />
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { Notify } from 'quasar'
+import { ref, onMounted , watch} from 'vue'
+import { useRouter } from 'vue-router'
+import { Notify, copyToClipboard } from 'quasar'
+import QrcodeVue from 'qrcode.vue'
 import { receiverFlow } from 'src/lib/noise.js'
 
-const route = useRoute()
+// Reactive state
 const router = useRouter()
+const channelID = crypto.randomUUID()
 
-// reactive state ----------------------------------------------------------------
-const sas         = ref('')
-const progress    = ref(-1)
-const fileName    = ref('')
-const downloadUrl = ref('')
-const confirmed   = ref(false)
-const rejected    = ref(false)
+const shareLink = ref('')
+const sas = ref('')
+const confirmed     = ref(false)
+const rejected      = ref(false)
+const showSasDialog = ref(false)   
+const progress = ref(-1)
+const done = ref(false)
+const fileName = ref('file.bin')
+const fileUrl = ref('')
 
-// show dialog only after SAS visible and before confirm/reject
-const showSasDialog = computed(() => !!sas.value && !confirmed.value && !rejected.value)
 
-// dialog actions ----------------------------------------------------------------
-function confirmTransfer () { confirmed.value = true }
-function rejectTransfer  () {
-  rejected.value = true
-  router.back()
+// Computed flag for showing SAS dialog
+
+// Copy link to clipboard
+async function copyLink() {
+  await copyToClipboard(shareLink.value)
+  Notify.create({ message: 'Link copied', color: 'positive' })
 }
 
-// main flow ---------------------------------------------------------------------
-onMounted(() => {
-  const channelID = route.params.id
-  if (!channelID) {
-    Notify.create({ type: 'negative', message: 'Missing channel ID' })
-    router.back()
-    return
-  }
+// Confirm or reject SAS code
+function confirmTransfer() {
+  confirmed.value     = true
+  showSasDialog.value = false   // hide the dialog
+}
+function rejectTransfer() {
+  rejected.value      = true
+  showSasDialog.value = false
+  router.push({ name: 'IndexPage' })
+}
 
+// Initiate receiverFlow on mount
+onMounted(() => {
+  // Build and display shareable link
+  shareLink.value = `${window.location.origin}/#/submit/${channelID}`
+
+  // Start the pairing + transfer flow
   receiverFlow(router, channelID, {
-    onSAS: code => (sas.value = code),
-    waitConfirm: () =>
-      new Promise(res => {
-        const stop = watch(confirmed, v => {
-          if (v) {
-            stop()
-            res()
-          }
-        })
-      }),
-    onProgress: pct => (progress.value = pct),
-    onDone: ({ fileName: fn, url }) => {
-      fileName.value   = fn
-      downloadUrl.value = url
-      Notify.create({ type: 'positive', message: 'Transfer complete' })
+    onSAS: code => {
+      sas.value           = code
+      showSasDialog.value = true     // open the dialog
     },
-    onError: err => Notify.create({ type: 'negative', message: err.toString() }),
+    waitConfirm: () => new Promise(res => {
+      // resolve only when the user clicks Confirm
+      const stop = watch(confirmed, v => {
+        if (v) {
+          stop()
+          res()
+        }
+      })
+    }),
+    onProgress: pct => { progress.value = pct },
+    onDone: ({ fileName: fn, url }) => {
+      fileName.value = fn
+      fileUrl.value = url
+      done.value = true
+      Notify.create({ message: 'File received!', color: 'positive' })
+    },
+    onError: err => {
+      Notify.create({ message: err.toString(), color: 'negative' })
+      router.push({ name: 'IndexPage' })
+    }
   })
 })
+
+// Trigger file download
+function downloadFile() {
+  const a = document.createElement('a')
+  a.href = fileUrl.value
+  a.download = fileName.value
+  a.click()
+}
 </script>
 
-<style scoped lang="scss">
-.full-width  { width: 100%; }
+<style scoped>
+.full-width { width: 100%; }
+.app-input { margin-top: 16px; }
+.app-action { margin-top: 24px; min-width: 200px; }
 .app-progress { margin-top: 32px; }
-.file-name   { font-size: 1.1rem; }
-.sas-card    { min-width: 360px; max-width: 90vw; }
+
+/* bigger SAS dialog */
+.sas-card { min-width: 360px; max-width: 90vw; }
 </style>
