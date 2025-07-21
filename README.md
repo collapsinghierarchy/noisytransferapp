@@ -13,13 +13,16 @@ A simple e2e encrypted transfer built with **Quasar** (Vue.js) on the frontend a
 
 ```text
 ├── src/
+│   ├── layouts/
+│       ├── MainLayout.vue    
 │   ├── libs/ 
 │       ├── noisy.js         # Contains the actual protocol 
 │   ├── pages/
-│   │   ├── IndexPage.vue    # Session entry & generation
+│   │   ├── IndexPage.vue    # Navigation between sending and requesting files.
 │   │   ├── SendPage.vue     # UI to send encrypted blobs
-│   │   └── RequestPage.vue  # UI to receive/decrypt blobs
-│   ├── App.vue
+│   │   └── ReceivePage.vue  # UI to receive/decrypt blobs from the SendPage.
+│   │   └── RequestPage.vue  # UI for preparing a link to receive a file.
+│   │   └── SubmitPage.vue   # UI for submitting a file to a request link. 
 ```
 
 ## Prerequisites
