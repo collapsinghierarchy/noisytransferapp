@@ -20,6 +20,7 @@ export default defineConfig((/* ctx */) => {
       'app.scss'
     ],
 
+
     // https://github.com/quasarframework/quasar/tree/dev/extras
     extras: [
       // 'ionicons-v4',
@@ -59,12 +60,11 @@ export default defineConfig((/* ctx */) => {
 
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},
-      
-      vitePlugins: [
-        ['vite-plugin-checker', {
-          eslint: {
-            lintCommand: 'eslint -c ./eslint.config.js "./src*/**/*.{js,mjs,cjs,vue}"',
-            useFlatConfig: true
+    vitePlugins: [
+      ['vite-plugin-checker', {
+        eslint: {
+          lintCommand: 'eslint -c ./eslint.config.js "./src*/**/*.{js,mjs,cjs,vue}"',
+          useFlatConfig: true
           }
         }, { server: false }]
       ]
@@ -94,7 +94,7 @@ export default defineConfig((/* ctx */) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: [ 'Notify', 'Dialog' ]
+      plugins: [ 'Notify', 'Dialog']
     },
 
     // animations: 'all', // --- includes all animations

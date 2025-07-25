@@ -2,6 +2,11 @@
 import { CipherSuite, Aes128Gcm, HkdfSha256, HpkeError } from '@hpke/core'
 import { HybridkemX25519Kyber768 } from '@hpke/hybridkem-x25519-kyber768'
 
+const cryptoAPI = window.crypto;
+// grab method refs so they can’t be shadowed
+const getRandomValues = cryptoAPI.getRandomValues.bind(cryptoAPI);
+const subtle          = cryptoAPI.subtle;
+
 /*********************************
  * Internal helpers
  *********************************/
@@ -11,9 +16,8 @@ const suite = () => new CipherSuite({
   aead: new Aes128Gcm(),
 })
 
-const WS_BASE = import.meta.env.VITE_WS_URL || (
-  "wss://" + 'pseudocrypt.site'
-)
+const WS_BASE = import.meta.env.VITE_WS_URL ||
+  "wss://api.whitenoise.systems/v1";
 
 // ---- Base‑64 helpers (URL‑safe tolerant) --------------------------
 const b64 = data => {
@@ -31,7 +35,7 @@ const unb64 = str => {
 }
 
 const enc = s => new TextEncoder().encode(s)
-const sha256 = async u8 => new Uint8Array(await crypto.subtle.digest('SHA-256', u8))
+const sha256 = async u8 => new Uint8Array(await subtle.digest('SHA-256', u8))
 
 async function keypairB64 () {
   const kp = await suite().kem.generateKeyPair({ extractable: true })
@@ -41,14 +45,38 @@ async function keypairB64 () {
   }
 }
 
-// Modified SAS function for one-sided PK
-async function sas (pkB64, nonceBU8, nonceAU8) {
-  const input = pkB64 + b64(nonceBU8) + b64(nonceAU8) + 'sas'
-  const bits = await sha256(enc(input))
-  const num = new DataView(bits.buffer).getUint32(0) & 0xfffff
-  return num.toString().padStart(6, '0')
+// Concatenate (little helper)
+const concat = (...bufs) => {
+  const len = bufs.reduce((n, b) => n + b.byteLength, 0)
+  const out = new Uint8Array(len)
+  let off = 0
+  for (const b of bufs) { out.set(new Uint8Array(b), off); off += b.byteLength }
+  return out.buffer
 }
 
+/**
+ * Deterministic Short Authentication String.
+ * Both parties call this with identical inputs ➜ identical 4‑emoji code.
+ */
+async function sas(pkB,
+                   nonceB,
+                   nonceA,
+                   vkA,
+                   algA) {
+
+  // transcript =  pkB || nonceB || nonceA || vkA || algId
+  const transcript = concat(
+    pkB,
+    nonceB.buffer,
+    nonceA.buffer,
+    vkA,
+    new TextEncoder().encode(algA)   // keeps future‑proof choice of scheme
+  )
+
+  const hash = await subtle.digest('SHA-256', transcript)
+  const num = new DataView(hash).getUint32(0) & 0xfffff
+  return num.toString().padStart(6, '0')
+}
 /**
  * Trigger a download and return the blob URL.
  */
@@ -61,6 +89,26 @@ function saveBlob (chunks, name) {
   a.click()
   return url
 }
+// signature helpers -------------------------------------------------------------
+
+async function genRSAPSS() {
+  const { publicKey, privateKey } = await subtle.generateKey(
+    { name: 'RSA-PSS', modulusLength: 3072,
+      publicExponent: new Uint8Array([1,0,1]),
+      hash: 'SHA-256'
+    },
+    true,
+    ['sign','verify']
+  );
+  const spki = await subtle.exportKey('spki', publicKey);
+  return { verificationKey: new Uint8Array(spki), signingKey: privateKey };
+}
+
+
+const b64url = (buf) =>
+  btoa(String.fromCharCode(...new Uint8Array(buf)))
+     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
 
 /*********************************
  * Exported high‑level flows
@@ -83,7 +131,24 @@ export async function senderFlow (
   } = {}
 ) {
   const ws = new WebSocket(`${WS_BASE}/ws?appID=${channelID}`)
+  ws.addEventListener("open", () => {
+  console.log("▶️ WebSocket open");
+    // Immediately send your “hello” or “subscribe” if required:
+    ws.send(JSON.stringify({ type: "hello i'm Sender" }));
+  });
   ws.addEventListener('error', onError)
+  // state ----------------------------------------------------------------
+  let signingKey = null       // keep only while you need to sign
+  let ephemVKRaw = null              // 32 B Ed25519  | 384 B RSA‑PSS
+  let algUsed = null
+
+  let receiverCommit = null
+  let nonceA = null
+  let receiverPub = null
+  let receiverNonce = null
+  let ackResolve = null
+  let rcvConfirmReceived = false
+  let rcvConfirmResolve = null
   try {
 
   // 1) Signal “I’m here” to the receiver
@@ -101,27 +166,29 @@ export async function senderFlow (
     }
     ws.addEventListener('message', listener)
   })
-
-
-   // 3) Now wait for the receiver’s commitment…
-    let receiverCommit = null
-    let nonceA = null
-    let receiverPub = null
-    let receiverNonce = null
-    let ackResolve = null
-    let rcvConfirmReceived = false
-    let rcvConfirmResolve = null
-
+    // 3) Now wait for the receiver’s commitment…
     ws.addEventListener('message', async ev => {
       const msg = JSON.parse(ev.data)
       
       // Phase 1: Receive commitment
-      if (msg.type === 'commit') {
-        receiverCommit = msg.commit
-        nonceA = crypto.getRandomValues(new Uint8Array(16))
-        ws.send(JSON.stringify({ type: 'nonce', nonce: b64(nonceA) }))
-      }
+   if (msg.type === 'commit') {
+    receiverCommit = msg.commit
+    console.log('cryptoAPI at line 183 →', cryptoAPI);
+    console.log('typeof getRandomValues →', typeof getRandomValues);
+
+    nonceA = getRandomValues(new Uint8Array(16))
+    ({ verificationKey: ephemVKRaw, signingKey } = await genRSAPSS())
+    algUsed = 'RSA-PSS'
       
+
+      ws.send(JSON.stringify({
+        type:  'nonce',
+        alg:   algUsed,
+        nonce: b64url(nonceA),
+        vk:    b64url(ephemVKRaw)   // ← exact bytes you’ll hash later
+      }))
+    }
+        
       // Phase 3: Receive reveal
       if (msg.type === 'reveal') {
         // Verify commitment
@@ -130,9 +197,10 @@ export async function senderFlow (
           throw new Error('Commitment verification failed')
         }
         
-        receiverPub = msg.pk
+        const pkBytes = unb64(msg.pk)        // Uint8Array
+        receiverPub   = pkBytes.buffer       // ArrayBuffer
         receiverNonce = unb64(msg.nonceB)
-        onSAS(await sas(receiverPub, receiverNonce, nonceA))
+        onSAS(await sas(receiverPub, receiverNonce, nonceA, ephemVKRaw.buffer, algUsed))
       }
       
       // Handle receiver confirmation
@@ -171,38 +239,50 @@ export async function senderFlow (
     }
 
     // Encrypt file using receiver's public key
+    console.log("Signing key:", signingKey.algorithm, signingKey.usages)
+    const signChunk = async (data) =>
+      new Uint8Array(await subtle.sign(
+        { name: algUsed, ...(algUsed === 'RSA-PSS' && { saltLength: 32 }) },
+        signingKey,
+        data
+      ))
+
     const pubKey = await suite().kem.deserializePublicKey(unb64(receiverPub))
     let sent = 0
     const reader = file.stream().getReader()
-    
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
 
-      // Create ack waiter for this chunk
-      await new Promise(resolve => {
-        ackResolve = resolve
-        
-        // Encrypt and send
-        suite().createSenderContext({ recipientPublicKey: pubKey })
-          .then(async ctx => {
-            const ct = await ctx.seal(value)
-            ws.send(JSON.stringify({
-              type: 'cipher',
-              enc: b64(ctx.enc),
-              ct: b64(new Uint8Array(ct))
-            }))
-          })
-          .catch(e => {
-            onError(e)
-            ws.close(1008, 'Encryption failed')
-            resolve() // Ensure we don't hang
-          })
-      })
+   while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
 
-      sent += value?.length || 0
-      onProgress(sent / file.size)
-    }
+    await new Promise(resolve => {
+      ackResolve = resolve
+
+      suite().createSenderContext({ recipientPublicKey: pubKey })
+        .then(async ctx => {
+          const ct    = new Uint8Array(await ctx.seal(value))
+          const enc   = ctx.enc        // KEM encapsulation
+          const toSig = concat(enc, ct)                // what we’ll sign
+          const sig   = await signChunk(toSig)
+
+          ws.send(JSON.stringify({
+            type: 'cipher',
+            enc: b64(enc),
+            ct:  b64(ct),
+            sig: b64(sig)             // NEW
+            // no need to repeat alg – peer learned it in Phase 2
+          }))
+        })
+        .catch(e => {
+          onError(e)
+          ws.close(1008, 'Encryption failed')
+          resolve()
+        })
+    })
+
+    sent += value?.length || 0
+    onProgress(sent / file.size)
+  }
 
     ws.send(JSON.stringify({ type: 'close', name: file.name }))
     onDone()
@@ -228,7 +308,15 @@ export async function receiverFlow (
   } = {}
 ) {
   const ws = new WebSocket(`${WS_BASE}/ws?appID=${channelID}`)
-  
+  ws.addEventListener("open", () => {
+  console.log("▶️ WebSocket open");
+    // Immediately send your “hello” or “subscribe” if required:
+    ws.send(JSON.stringify({ type: "hello i'm Receiver" }));
+  });
+    // top‑level state
+  let vkA = null       // sender's verification key in raw form
+  let algA = null
+
   try {
     await new Promise(res => ws.addEventListener('open', res))
 
@@ -247,14 +335,14 @@ export async function receiverFlow (
 
     // Receiver generates key pair and nonce
     const { pub: pkB, priv: skBcrypto } = await keypairB64()
-    const nonceB = crypto.getRandomValues(new Uint8Array(16))
+    const nonceB = getRandomValues(new Uint8Array(16))
 
     // Phase 1: Wait for sender's nonce
     const commitment = b64(await sha256(enc(pkB + b64(nonceB))))
     ws.send(JSON.stringify({ type: 'commit', commit: commitment }))
 
     const skBytes = skBcrypto instanceof CryptoKey
-      ? new Uint8Array(await crypto.subtle.exportKey('raw', skBcrypto))
+      ? new Uint8Array(await subtle.exportKey('raw', skBcrypto))
       : skBcrypto
 
     let chunks = []
@@ -264,38 +352,52 @@ export async function receiverFlow (
     let nonceA = null
     let sndConfirmReceived = false
     let sndConfirmResolve = null
+    let senderVerifyKey   // keep as long as file transfer lives
 
     ws.addEventListener('message', async ev => {
       const msg = JSON.parse(ev.data)
       
-      // Phase 2: Receive sender's nonce
-      if (msg.type === 'nonce') {
-        nonceA = unb64(msg.nonce)
-        
-        // Phase 3: Send reveal
-        ws.send(JSON.stringify({
-          type: 'reveal',
-          pk: pkB,
-          nonceB: b64(nonceB)
-        }))
-        
-        // Compute SAS
-        onSAS(await sas(pkB, nonceB, nonceA))
-        
-        // Wait for local SAS confirmation
-        await waitConfirm()
-        
-        // Wait for sender's confirmation
-        if (!sndConfirmReceived) {
-          await new Promise(resolve => {
-            sndConfirmResolve = resolve
-          })
-        }
-        
-        // Send receiver confirmation
-        ws.send(JSON.stringify({ type: 'rcvconfirm' }))
-        return
+  if (msg.type === 'nonce') {
+      // (1) pull fields out
+      nonceA = unb64(msg.nonce)               // Uint8Array(16)
+      vkA    = unb64(msg.vk)                  // ArrayBuffer (32 B or 384 B)
+      algA   = msg.alg ?? 'Ed25519'           // default if omitted
+      senderVerifyKey = await subtle.importKey(
+        algA === 'Ed25519' ? 'raw' : 'spki',
+        vkA,
+        { name: algA, hash: 'SHA-256' },
+        false, ['verify']
+      )
+
+      // (2) OPTIONAL: stash an imported key in case you ever verify later
+      // const senderVK = await crypto.subtle.importKey(
+      //   algA === 'Ed25519' ? 'raw' : 'spki',
+      //   vkA,
+      //   { name: algA, hash: 'SHA-256' },
+      //   false, ['verify']
+      // )
+
+      // ── Phase 3: send reveal ─────────────────────────────────────────
+      ws.send(JSON.stringify({
+        type: 'reveal',
+        pk:    pkB,                // your static or semi‑static key
+        nonceB: b64(nonceB)
+      }))
+
+      const pkBBytes = unb64(pkB)              // Uint8Array
+      const pkBBuf   = pkBBytes.buffer           // ArrayBuffer
+      // ── Compute and display SAS (now binds vkA) ─────────────────────
+      onSAS(await sas(pkBBuf, nonceB, nonceA, vkA, algA))
+
+      // ── Usual confirmation dance ────────────────────────────────────
+      await waitConfirm()
+
+      if (!sndConfirmReceived) {
+        await new Promise(resolve => { sndConfirmResolve = resolve })
       }
+      ws.send(JSON.stringify({ type: 'rcvconfirm' }))
+      return
+    }
 
       // Handle sender confirmation
       if (msg.type === 'sndconfirm') {
@@ -310,13 +412,29 @@ export async function receiverFlow (
       // File transfer
       if (msg.type === 'cipher') {
         totalChunks++
+        const enc = unb64(msg.enc)       // Uint8Array
+        const ct  = unb64(msg.ct)        // Uint8Array
+        const sig = unb64(msg.sig)       // Uint8Array
+
+        // (1) verify ---------------------------------------------------
+        const ok = await subtle.verify(
+          { name: algA, ...(algA === 'RSA-PSS' && { saltLength: 32 }) },
+          senderVerifyKey,
+          sig,
+          concat(enc, ct)                // same byte order as sender
+        )
+        if (!ok) {
+          onError(new Error('Bad signature on ciphertext chunk'))
+          ws.close(1008, 'Signature failure')
+          return
+        }
+
         try {
           const ctx = await suite().createRecipientContext({
             recipientKey: skBytes,
-            enc: unb64(msg.enc),
+            enc,
           })
-
-          const pt = await ctx.open(unb64(msg.ct))
+          const pt = await ctx.open(ct)
           chunks.push(pt)
           received += pt.byteLength
           onProgress(totalChunks > 0 ? received : 0)
