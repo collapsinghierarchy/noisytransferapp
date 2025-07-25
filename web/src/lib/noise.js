@@ -138,7 +138,7 @@ export async function senderFlow (
   });
   ws.addEventListener('error', onError)
   // state ----------------------------------------------------------------
-  let signingKey = null       // keep only while you need to sign
+  let ephemSigningKey = null       // keep only while you need to sign
   let ephemVKRaw = null              // 32 B Ed25519  | 384 B RSA‑PSS
   let algUsed = null
 
@@ -173,11 +173,11 @@ export async function senderFlow (
       // Phase 1: Receive commitment
    if (msg.type === 'commit') {
     receiverCommit = msg.commit
-    console.log('cryptoAPI at line 183 →', cryptoAPI);
-    console.log('typeof getRandomValues →', typeof getRandomValues);
 
     nonceA = getRandomValues(new Uint8Array(16))
-    ({ verificationKey: ephemVKRaw, signingKey } = await genRSAPSS())
+    const { verificationKey, signingKey } = await genRSAPSS()
+    ephemVKRaw = verificationKey
+    ephemSigningKey = signingKey
     algUsed = 'RSA-PSS'
       
 
@@ -185,7 +185,7 @@ export async function senderFlow (
         type:  'nonce',
         alg:   algUsed,
         nonce: b64url(nonceA),
-        vk:    b64url(ephemVKRaw)   // ← exact bytes you’ll hash later
+        vk:    b64url(ephemVKRaw) 
       }))
     }
         
@@ -239,15 +239,15 @@ export async function senderFlow (
     }
 
     // Encrypt file using receiver's public key
-    console.log("Signing key:", signingKey.algorithm, signingKey.usages)
+    console.log("Signing key:", ephemSigningKey.algorithm, ephemSigningKey.usages)
     const signChunk = async (data) =>
       new Uint8Array(await subtle.sign(
         { name: algUsed, ...(algUsed === 'RSA-PSS' && { saltLength: 32 }) },
-        signingKey,
+        ephemSigningKey,
         data
       ))
 
-    const pubKey = await suite().kem.deserializePublicKey(unb64(receiverPub))
+    const pubKey = await suite().kem.deserializePublicKey(new Uint8Array(receiverPub))
     let sent = 0
     const reader = file.stream().getReader()
 
