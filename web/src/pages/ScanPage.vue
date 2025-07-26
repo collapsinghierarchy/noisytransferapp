@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, nextTick, onBeforeUnmount } from 'vue'
 import { Platform, Notify } from 'quasar'
 import { useRouter } from 'vue-router'
 import { Html5Qrcode } from 'html5-qrcode'
@@ -62,6 +62,8 @@ async function startScan () {
     return
   }
   try {
+  scanning.value = true
+  await nextTick()
   html5Scanner = new Html5Qrcode('qr-reader')
   Notify.create({ message: 'Starting camera…', position: 'bottom' })
   
