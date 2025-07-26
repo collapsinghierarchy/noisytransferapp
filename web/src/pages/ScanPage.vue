@@ -13,8 +13,7 @@
     <div
       v-if="scanning"
       id="qr-reader"
-      style="width: 100%; max-width: 320px; aspect-ratio:1"
-    />
+      style="width: 100%; max-width: 320px; aspect-ratio:1"></div>
 
     <!-- Desktop / fallback input -->
     <div v-else-if="!isMobile" class="full-width column items-center">
