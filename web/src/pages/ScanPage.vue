@@ -46,6 +46,8 @@ let   html5Scanner = null
 // Fallback link input
 const shareLink = ref('')
 
+Notify.create('Welcome')
+
 function goToLink() {
   if (shareLink.value) {
     router.push(shareLink.value)
