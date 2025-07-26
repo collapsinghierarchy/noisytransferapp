@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-// No extra logic needed
+// nothing to do
 </script>
 
 <style scoped lang="scss">

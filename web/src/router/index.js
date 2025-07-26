@@ -1,6 +1,8 @@
 import { defineRouter } from '#q-app/wrappers'
 import { createRouter, createMemoryHistory, createWebHistory, createWebHashHistory } from 'vue-router'
 import routes from './routes'
+import { Platform } from 'quasar'
+
 
 /*
  * If not building with SSR mode, you can
@@ -25,6 +27,16 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     // quasar.conf.js -> build -> publicPath
     history: createHistory(process.env.VUE_ROUTER_BASE)
   })
+
+  Router.beforeEach((to, from, next) => {
+  // If the user is headed to “/” on mobile, send them to /scan
+  if (to.path === '/' && Platform.is.mobile) {
+    next({ path: '/scan' })
+  }
+  else {
+    next()
+  }
+})
 
   return Router
 })

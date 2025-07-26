@@ -20,6 +20,7 @@ const routes = [
         path: 'submit/:id',
         component: () => import('pages/SubmitPage.vue')
       },
+      { path: 'scan', component: () => import('pages/ScanPage.vue') },
     ]
   },
 
