@@ -11,9 +11,8 @@
     />
 
     <div
-      v-if="scanning"
-      id="qr-reader"
-      style="width: 100%; max-width: 320px; aspect-ratio:1"></div>
+       v-if="scanning"
+        id="qr-reader"></div>
 
     <!-- Desktop / fallback input -->
     <div v-else-if="!isMobile" class="full-width column items-center">
@@ -91,8 +90,13 @@ onBeforeUnmount(() => {
 .full-width { width: 100%; }
 .app-input { margin-top: 16px; }
 #qr-reader {
+  width: 320px;
+  height: 320px;      /* ensure a real box */
+  max-width: 90vw;    /* shrink on narrow screens */
+  margin: 0 auto;
   border: 2px solid var(--q-color-primary);
   border-radius: 8px;
   overflow: hidden;
 }
+
 </style>
