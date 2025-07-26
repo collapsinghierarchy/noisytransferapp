@@ -10,9 +10,7 @@
       @click="startScan"
     />
 
-    <div
-       v-if="scanning"
-        id="qr-reader"></div>
+   <div v-if="scanning" id="qr-reader"></div>
 
     <!-- Desktop / fallback input -->
     <div v-else-if="!isMobile" class="full-width column items-center">
@@ -54,27 +52,37 @@ function goToLink() {
   }
 }
 
-async function startScan() {
-  scanning.value = true
-  html5Scanner = new Html5Qrcode("qr-reader")
+async function startScan () {
+  console.log('▶ startScan clicked')
+
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    Notify.create('Open in Chrome tab to scan')
+    return
+  }
+
+  html5Scanner = new Html5Qrcode('qr-reader')
+  console.log('Created Html5Qrcode instance')
 
   try {
     await html5Scanner.start(
-      { facingMode: "environment" },
+      { facingMode: 'environment' },
       { fps: 10, qrbox: 250 },
-      qrCodeMessage => {
+      code => {
+        console.log('QR decoded:', code)
         html5Scanner.stop()
         scanning.value = false
-        router.push(qrCodeMessage)
+        Notify.create('QR recognised')
+        router.push(code)
       },
-      /* ignore decode errors */
-      () => {}
+      /* on decode error */
+      errMsg => console.debug('decode error', errMsg)
     )
+    console.log('Camera started OK')
     scanning.value = true
-    Notify.create('Camera ready – point it at a QR code')
-  }
-  catch (err) {
-    Notify.create({ type: 'negative', message: err.message || 'Camera error' })
+    Notify.create('Camera ready – point at QR')
+  } catch (err) {
+    console.error('html5-qrcode.start() failed:', err)
+    Notify.create({ type: 'negative', message: err.message })
     scanning.value = false
   }
 }
@@ -91,9 +99,9 @@ onBeforeUnmount(() => {
 .app-input { margin-top: 16px; }
 #qr-reader {
   width: 320px;
-  height: 320px;      /* ensure a real box */
-  max-width: 90vw;    /* shrink on narrow screens */
-  margin: 0 auto;
+  height: 320px;
+  max-width: 90vw;
+  margin: 16px auto;
   border: 2px solid var(--q-color-primary);
   border-radius: 8px;
   overflow: hidden;
