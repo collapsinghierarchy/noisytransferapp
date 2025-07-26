@@ -1,11 +1,20 @@
 // High‑level pairing + file‑transfer helpers
 import { CipherSuite, Aes128Gcm, HkdfSha256, HpkeError } from '@hpke/core'
 import { HybridkemX25519Kyber768 } from '@hpke/hybridkem-x25519-kyber768'
+import { v4 as uuidv4 } from 'uuid'
+
 
 const cryptoAPI = window.crypto;
 // grab method refs so they can’t be shadowed
 const getRandomValues = cryptoAPI.getRandomValues.bind(cryptoAPI);
 const subtle          = cryptoAPI.subtle;
+
+export function makeUUID () {
+  if (typeof cryptoAPI.randomUUID === 'function') {
+    return cryptoAPI.randomUUID()
+  }
+  return uuidv4()
+}
 
 /*********************************
  * Internal helpers
@@ -239,7 +248,6 @@ export async function senderFlow (
     }
 
     // Encrypt file using receiver's public key
-    console.log("Signing key:", ephemSigningKey.algorithm, ephemSigningKey.usages)
     const signChunk = async (data) =>
       new Uint8Array(await subtle.sign(
         { name: algUsed, ...(algUsed === 'RSA-PSS' && { saltLength: 32 }) },

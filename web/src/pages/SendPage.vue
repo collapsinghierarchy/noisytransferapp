@@ -61,7 +61,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { Notify, copyToClipboard } from 'quasar'
-import { senderFlow } from 'src/lib/noise.js'
+import { senderFlow, makeUUID } from 'src/lib/noise.js'
 import { useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
 
@@ -85,7 +85,7 @@ function rejectTransfer() {
 
 async function startSend() {
   if (!file.value) return
-  const channelID = crypto.randomUUID()
+  const channelID = makeUUID();
   senderFlow(router, file.value, channelID, {
     onShareLink: link => shareLink.value = link,
     onSAS: code => sas.value = code,

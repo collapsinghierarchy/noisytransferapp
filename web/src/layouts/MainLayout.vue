@@ -52,7 +52,8 @@
 <script setup>
 import { ref } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
-
+import { useRouter } from 'vue-router'
+const router = useRouter()
 // List of links shown in the drawer
 const linksList = [
   {
@@ -78,6 +79,10 @@ const leftDrawerOpen = ref(false)
 
 function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value
+}
+
+function goHome() {
+  router.push('/')
 }
 
 </script>

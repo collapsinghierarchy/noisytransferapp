@@ -64,11 +64,11 @@ import { ref, onMounted , watch} from 'vue'
 import { useRouter } from 'vue-router'
 import { Notify, copyToClipboard } from 'quasar'
 import QrcodeVue from 'qrcode.vue'
-import { receiverFlow } from 'src/lib/noise.js'
+import { receiverFlow, makeUUID } from 'src/lib/noise.js'
 
 // Reactive state
 const router = useRouter()
-const channelID = crypto.randomUUID()
+const channelID = makeUUID()
 
 const shareLink = ref('')
 const sas = ref('')
