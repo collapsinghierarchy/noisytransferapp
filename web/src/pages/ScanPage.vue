@@ -61,12 +61,12 @@ async function startScan () {
     Notify.create('Open in Chrome tab to scan')
     return
   }
-
+  try {
   html5Scanner = new Html5Qrcode('qr-reader')
   Notify.create({ message: 'Starting camera…', position: 'bottom' })
   
    let timeoutId
-  try {
+
     // promise race: scanner start OR a 5‑second timeout
     await Promise.race([
       html5Scanner.start(
