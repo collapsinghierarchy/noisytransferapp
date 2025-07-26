@@ -29,13 +29,20 @@ const WS_BASE = import.meta.env.VITE_WS_URL ||
   "wss://api.whitenoise.systems/v1";
 
 // ---- Base‑64 helpers (URL‑safe tolerant) --------------------------
-const b64 = data => {
+export function b64 (data) {
   const u8 = data instanceof ArrayBuffer ? new Uint8Array(data) : data
-  if (!u8 || typeof u8[Symbol.iterator] !== 'function') {
-    throw new TypeError('b64() expected Uint8Array/ArrayBuffer, got: ' + data)
+  let str  = ''
+  const CHUNK = 0x8000         // 32 768  (well below the arg limit)
+
+  for (let i = 0; i < u8.length; i += CHUNK) {
+    str += String.fromCharCode.apply(
+      null,
+      u8.subarray(i, i + CHUNK)
+    )
   }
-  return btoa(String.fromCharCode(...u8))
+  return btoa(str)
 }
+
 const unb64 = str => {
   str = str.replace(/-/g, '+').replace(/_/g, '/')
   const pad = str.length % 4
