@@ -65,12 +65,11 @@ async function startScan () {
   scanning.value = true
   await nextTick()
   html5Scanner = new Html5Qrcode('qr-reader')
-  Notify.create({ message: 'Starting camera…', position: 'bottom' })
   
-   let timeoutId
+  let timeoutId
 
     // promise race: scanner start OR a 5‑second timeout
-    await Promise.race([
+  await Promise.race([
       html5Scanner.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: 250 },
@@ -78,8 +77,18 @@ async function startScan () {
           console.log('QR decoded:', code)
           html5Scanner.stop()
           scanning.value = false
-          Notify.create({ message: 'QR recognised', position: 'bottom' })
-          router.push(code)
+
+          let target = code
+          try {
+            const u = new URL(code)
+            // If the QR belongs to the same origin, push only the path
+            if (u.origin === window.location.origin) {
+              target = u.pathname + u.hash   // hash is usually empty
+            }
+          } catch {
+            /* not a full URL – leave as‑is */
+          }
+          router.push(target)         // now resolves correctly
         },
         errMsg => console.debug('decode err', errMsg)
       ),
