@@ -2,7 +2,20 @@
   <q-page padding class="column items-center">
     <h5 class="q-mb-md">Send a File</h5>
 
+    <div class="full-width">
+    <!-- Modern browsers: showOpenFilePicker -->
+    <q-btn
+      v-if="canUseFS"
+      class="full-width app-input"
+      color="primary"
+      icon="drive_file_move"
+      label="Choose File"
+      @click="chooseFile"
+    />
+
+    <!-- Fallback: classic <input type=file> -->
     <q-file
+      v-else
       v-model="file"
       outlined
       use-chips
@@ -10,14 +23,15 @@
       label="Choose File"
       class="full-width app-input"
     />
+  </div>
 
-    <q-btn
-      label="Start Pairing"
-      icon="link"
-      class="app-btn app-btn-primary app-action"
-      :disable="!file"
-      @click="startSend"
-    />
+  <q-btn
+    label="Start Pairing"
+    icon="link"
+    class="app-btn app-btn-primary app-action"
+    :disable="!file"
+    @click="startSend"
+  />
 
     <q-input
       v-if="shareLink"
@@ -76,7 +90,25 @@ import { useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
 
 const router = useRouter()
+/* ----------feature‑detect File System Access ---------- */
+const canUseFS = 'showOpenFilePicker' in window
 const file = ref(null)
+
+/* ----------modern file picker ---------- */
+async function chooseFile () {
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      id: 'noisytransfer',
+      types: [{ description: 'All files', accept: { '*/*': ['.'] } }]
+    })
+    file.value = await handle.getFile()
+  } catch (err) {
+    if (err?.name !== 'AbortError') {
+      Notify.create({ type: 'negative', message: err.message })
+    }
+  }
+}
+
 const shareLink = ref('')
 const sas = ref('')
 const progress = ref(-1)

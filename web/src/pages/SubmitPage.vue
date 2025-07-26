@@ -2,16 +2,36 @@
   <q-page padding class="column items-center">
     <h5 class="q-mb-md">Upload File</h5>
 
+    <div class="full-width">
+    <q-btn
+      v-if="canUseFS"
+      class="full-width app-input"
+      color="primary"
+      icon="drive_file_move"
+      label="Select File"
+      @click="chooseFile"
+    />
+
     <q-file
+      v-else
       v-model="file"
       outlined
       use-chips
       accept="*/*"
-      label="Choose File"
-      class="full-width"
+      label="Select File"
+      class="full-width app-input"
     />
+  </div>
 
-    <q-btn
+  <q-btn
+    :disable="!file"
+    color="primary"
+    label="Submit"
+    class="q-mt-md"
+    @click="submit"
+  />
+
+     <q-btn
       label="Start Transfer"
       icon="cloud_upload"
       color="primary"
@@ -51,7 +71,23 @@ import { senderFlow } from 'src/lib/noise.js'
 
 const route = useRoute()
 const router = useRouter()
+const canUseFS = 'showOpenFilePicker' in window
 const file = ref(null)
+
+async function chooseFile () {
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      id: 'noisytransfer-submit',
+      types: [{ description: 'All files', accept: { '*/*': ['.'] } }]
+    })
+    file.value = await handle.getFile()
+  } catch (err) {
+    if (err?.name !== 'AbortError') {
+      Notify.create({ type: 'negative', message: err.message })
+    }
+  }
+}
+
 const progress = ref(-1)
 const sas = ref('')
 const confirmed     = ref(false)
