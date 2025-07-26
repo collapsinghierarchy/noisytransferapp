@@ -72,6 +72,7 @@ async function startScan() {
       /* ignore decode errors */
       () => {}
     )
+    scanning.value = true
   }
   catch (err) {
     Notify.create({ type: 'negative', message: err.toString() })
