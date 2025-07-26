@@ -74,7 +74,7 @@ async function startScan() {
     Notify.create('Camera ready – point it at a QR code')
   }
   catch (err) {
-    Notify.create({ type: 'negative', message: e.message || 'Camera error' })
+    Notify.create({ type: 'negative', message: err.message || 'Camera error' })
     scanning.value = false
   }
 }
