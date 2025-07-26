@@ -97,10 +97,9 @@ const file = ref(null)
 /* ----------modern file picker ---------- */
 async function chooseFile () {
   try {
-    const [handle] = await window.showOpenFilePicker({
-      id: 'noisytransfer',
-      types: [{ description: 'All files', accept: { '*/*': ['.'] } }]
-    })
+     const [handle] = await window.showOpenFilePicker({
+        id: 'noisytransfer'   // (optional) keeps a sticky picker directory
+      })
     file.value = await handle.getFile()
   } catch (err) {
     if (err?.name !== 'AbortError') {

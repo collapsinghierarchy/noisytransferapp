@@ -22,15 +22,6 @@
       class="full-width app-input"
     />
   </div>
-
-  <q-btn
-    :disable="!file"
-    color="primary"
-    label="Submit"
-    class="q-mt-md"
-    @click="submit"
-  />
-
      <q-btn
       label="Start Transfer"
       icon="cloud_upload"
@@ -76,10 +67,9 @@ const file = ref(null)
 
 async function chooseFile () {
   try {
-    const [handle] = await window.showOpenFilePicker({
-      id: 'noisytransfer-submit',
-      types: [{ description: 'All files', accept: { '*/*': ['.'] } }]
-    })
+   const [handle] = await window.showOpenFilePicker({
+  id: 'noisytransfer'   // (optional) keeps a sticky picker directory
+  })
     file.value = await handle.getFile()
   } catch (err) {
     if (err?.name !== 'AbortError') {
