@@ -56,7 +56,6 @@ function goToLink() {
 
 async function startScan () {
   console.log('▶ startScan pressed')
-  Notify.create({ message: 'Starting camera…', position: 'bottom' })
 
   if (window.matchMedia('(display-mode: standalone)').matches) {
     Notify.create('Open in Chrome tab to scan')
@@ -64,7 +63,7 @@ async function startScan () {
   }
 
   html5Scanner = new Html5Qrcode('qr-reader')
-  console.log('Created Html5Qrcode instance')
+  Notify.create({ message: 'Starting camera…', position: 'bottom' })
   
    let timeoutId
   try {
