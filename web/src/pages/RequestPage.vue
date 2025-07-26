@@ -15,8 +15,18 @@
       </template>
     </q-input>
 
-    <div v-if="shareLink" class="q-mt-lg text-center">
-      <qrcode-vue :value="shareLink" :size="150" />
+     <div
+        v-if="shareLink"
+        class="q-mt-lg text-center"
+        style="display: inline-block; background: #fff; padding: 16px; border-radius: 8px;"
+      >
+        <qrcode-vue
+          tag="img"
+          :value="shareLink"
+          :size="300"
+          level="H"
+          :margin="4"
+        />
     </div>
 
     <!-- Loading indicator before shareLink is ready -->

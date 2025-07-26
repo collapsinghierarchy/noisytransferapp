@@ -15,7 +15,12 @@
         <q-toolbar-title class="cursor-pointer" @click="goHome">
           Noisytransfer
         </q-toolbar-title>
-
+      <q-btn
+        dense
+        flat
+        :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+        @click="toggleTheme"
+      />
         <div class="q-ml-md">v0.1.0</div>
       </q-toolbar>
     </q-header>
@@ -53,6 +58,20 @@
 import { ref } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
+
+function toggleTheme() {
+  // flip Quasar’s dark mode state
+  $q.dark.toggle()
+
+  // persist the user’s choice if you want:
+  localStorage.setItem(
+    'userDarkPreference',
+    $q.dark.isActive ? 'dark' : 'light'
+  )
+}
 const router = useRouter()
 // List of links shown in the drawer
 const linksList = [
