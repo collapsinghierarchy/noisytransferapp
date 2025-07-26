@@ -86,8 +86,9 @@ async function startScan () {
               target = u.pathname + u.hash   // hash is usually empty
             }
           } catch {
-            /* not a full URL – leave as‑is */
+            Notify.create({ message: `InvalidURL: ${target}`, position: 'bottom' })
           }
+          Notify.create({ message: `Going to ${target}`, position: 'bottom' })
           router.push(target)         // now resolves correctly
         },
         errMsg => console.debug('decode err', errMsg)
