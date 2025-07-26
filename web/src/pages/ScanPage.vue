@@ -55,7 +55,8 @@ function goToLink() {
 }
 
 async function startScan () {
-  console.log('▶ startScan clicked')
+  console.log('▶ startScan pressed')
+  Notify.create({ message: 'Starting camera…', position: 'bottom' })
 
   if (window.matchMedia('(display-mode: standalone)').matches) {
     Notify.create('Open in Chrome tab to scan')
@@ -64,27 +65,40 @@ async function startScan () {
 
   html5Scanner = new Html5Qrcode('qr-reader')
   console.log('Created Html5Qrcode instance')
-
+  
+   let timeoutId
   try {
-    await html5Scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
-      code => {
-        console.log('QR decoded:', code)
-        html5Scanner.stop()
-        scanning.value = false
-        Notify.create('QR recognised')
-        router.push(code)
-      },
-      /* on decode error */
-      errMsg => console.debug('decode error', errMsg)
-    )
-    console.log('Camera started OK')
+    // promise race: scanner start OR a 5‑second timeout
+    await Promise.race([
+      html5Scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 250 },
+        code => {
+          console.log('QR decoded:', code)
+          html5Scanner.stop()
+          scanning.value = false
+          Notify.create({ message: 'QR recognised', position: 'bottom' })
+          router.push(code)
+        },
+        errMsg => console.debug('decode err', errMsg)
+      ),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Camera timeout')), 5000)
+      })
+    ])
+
+    clearTimeout(timeoutId)
     scanning.value = true
-    Notify.create('Camera ready – point at QR')
-  } catch (err) {
-    console.error('html5-qrcode.start() failed:', err)
-    Notify.create({ type: 'negative', message: err.message })
+    console.log('✅ camera started')
+    Notify.create({ message: 'Camera ready – point at QR', position: 'bottom' })
+  }
+  catch (err) {
+    console.error('❌ camera failed:', err)
+    Notify.create({
+      type: 'negative',
+      message: err?.message || 'Camera error',
+      position: 'bottom'
+    })
     scanning.value = false
   }
 }
