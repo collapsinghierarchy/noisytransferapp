@@ -89,6 +89,9 @@ async function startScan () {
             Notify.create({ message: `InvalidURL: ${target}`, position: 'bottom' })
           }
           Notify.create({ message: `Going to ${target}`, position: 'bottom' })
+          if (target.startsWith('/#/')) {
+            target = target.slice(2)   // "/#/submit/XYZ" -> "/submit/XYZ"
+          }
           router.push(target)         // now resolves correctly
         },
         errMsg => console.debug('decode err', errMsg)
