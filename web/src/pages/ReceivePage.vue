@@ -25,15 +25,16 @@
     />
 
     <!-- download area -->
-    <div v-if="downloadUrl" class="column items-center q-mt-lg">
-      <div class="file-name">Saved as <b>{{ fileName }}</b></div>
+   <div v-if="downloadUrl" class="column items-center q-mt-lg">
+  <div class="file-name">Ready: <b>{{ fileName }}</b></div>
+
+      <!-- single button: showSaveFilePicker if possible -->
       <q-btn
         color="primary"
-        icon="download"
-        label="Download file"
+        icon="save"
+        label="Save file"
         class="q-mt-md"
-        :href="downloadUrl"
-        :download="fileName"
+        @click="saveAs"
       />
     </div>
   </q-page>
@@ -55,6 +56,37 @@ const fileName    = ref('')
 const downloadUrl = ref('')
 const confirmed   = ref(false)
 const rejected    = ref(false)
+
+async function saveAs () {
+  if (!downloadUrl.value) return
+
+  // 1) If the browser supports showSaveFilePicker…
+  if ('showSaveFilePicker' in window) {
+    try {
+      // fetch the blob (we only have an object‑URL)
+      const blob = await (await fetch(downloadUrl.value)).blob()
+
+      // open the native Save As dialog
+      const handle   = await window.showSaveFilePicker({
+        suggestedName: fileName.value
+      })
+      const writable = await handle.createWritable()
+      await writable.write(blob)
+      await writable.close()
+
+      Notify.create({ message: 'File saved 🎉', type: 'positive' })
+      return
+    } catch (err) {
+      Notify.create({ type: 'negative', message: err.message })
+    }
+  }
+
+  // 2) Fallback: trigger the normal download
+  const a = document.createElement('a')
+  a.href = downloadUrl.value
+  a.download = fileName.value
+  a.click()
+}
 
 // show dialog only after SAS visible and before confirm/reject
 const showSasDialog = computed(() => !!sas.value && !confirmed.value && !rejected.value)
