@@ -3,28 +3,35 @@
     <h5 class="q-mb-md">Send a File</h5>
 
     <div class="full-width">
-    <!-- Modern browsers: showOpenFilePicker -->
-    <q-btn
-      v-if="canUseFS"
-      class="full-width app-input"
-      color="primary"
-      icon="drive_file_move"
-      label="Choose File"
-      @click="chooseFile"
-    />
+    <!-- ───────── File‑picker area ───────── -->
+    <template v-if="!file">
+      <!-- Modern browsers with showOpenFilePicker -->
+      <q-btn
+        v-if="canUseFS"
+        flat
+        icon="attach_file"
+        label="Choose File"
+        @click="chooseFile"
+      />
 
-    <!-- Fallback: classic <input type=file> -->
-    <q-file
-      v-else
-      v-model="file"
-      outlined
-      use-chips
-      accept="*/*"
-      label="Choose File"
-      class="full-width app-input"
-    />
-  </div>
+      <!-- Fallback <input type=file> for older browsers -->
+      <q-file
+        v-else
+        v-model="file"
+        outlined
+        use-chips
+        accept="*/*"
+        label="Choose File"
+        class="full-width app-input"
+      />
+    </template>
 
+    <!-- Once a file is chosen (picker or share), show its name -->
+    <div v-else class="q-pa-md">
+      <q-icon name="insert_drive_file" class="q-mr-sm" />
+      <span>{{ file.name }}</span>
+    </div>
+</div>
   <q-btn
     label="Start Pairing"
     icon="link"
@@ -75,7 +82,7 @@
           <div class="text-h6 text-center">Verify 6‑digit code</div>
           <div class="text-h4 text-primary text-center q-mt-md">{{ sas }}</div>
         </q-card-section>
-        <q-card-actions align="around">
+        <q-card-actions class="justify-around">
           <q-btn flat color="negative" label="Reject" @click="rejectTransfer" />
           <q-btn flat color="positive" label="Confirm" @click="confirmTransfer" />
         </q-card-actions>
@@ -115,7 +122,6 @@ async function nativeShare () {
   }
 }
 
-
 /* ----------feature‑detect File System Access ---------- */
 const canUseFS = 'showOpenFilePicker' in window
 const file = ref(null)
@@ -141,6 +147,15 @@ const confirmed = ref(false)
 const rejected = ref(false)
 
 const showSasDialog = computed(() => !!sas.value && !confirmed.value && !rejected.value)
+
+// watch for any incoming shared file and notify / trigger send
+watch(file, newFile => {
+  if (!newFile) return
+    Notify.create(`Loaded via share: “${newFile.name}”`)
+    startSend()
+  
+})
+
 
 function confirmTransfer() {
   confirmed.value = true
