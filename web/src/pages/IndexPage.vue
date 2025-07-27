@@ -1,9 +1,34 @@
 <template>
   <q-page class="flex items-center justify-center q-pa-md">
-    <q-banner dense class="bg-primary text-white q-mb-lg">
-      NoisyTransfer lets you share (end-to-end encrypted) files using a single link or QR-Code. Just scan or share with anyone or any of your devices and confirm the code. No Cloud, no Passwords, no same Network requirement.
-    </q-banner>
     <div class="column items-center q-gutter-y-xl">
+    <q-card
+      flat
+      bordered
+      class="hero-card q-pa-lg q-mb-xl"
+    > 
+      <div class="row items-center no-wrap">
+        <!-- 1) hero icon / illustration -->
+        <q-img
+          src="src/assets/logo.png"
+          alt="Secure share illustration"
+          width="96px"
+          height="96px"
+          class="q-mr-lg"
+          contain
+        />
+
+         <!-- 2) headline + subline -->
+        <div class="column">
+          <div class="text-h5 text-weight-bold q-mb-xs">
+            Beam files privately in seconds
+          </div>
+          <div class="text-body1">
+            Scan a QR or share a single link; end‑to‑end encrypted, quantum-safe, no passwords, no cloud.
+          </div>
+        </div>
+      </div>
+    </q-card>
+
       <q-btn
         to="/send"
         unelevated
@@ -21,7 +46,7 @@
         icon="download"
         label="Receive a File"
         class="big-btn"
-        color="secondary"
+        color="primary"
       />
     </div>
   </q-page>
@@ -43,5 +68,9 @@
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.25);
   }
+}
+.explain-banner .q-banner__content {
+  font-size: 1.25rem;   /* adjust as you like */
+  line-height: 1.4;
 }
 </style>

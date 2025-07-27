@@ -19,10 +19,10 @@
           class="q-mr-sm"
           aria-label="Home"
         >
-          <q-img
-            src="icons/android-launchericon-48-48.png"
+        <q-img
+            src="src/assets/android-launchericon-48-48.png"
             alt="NoisyTransfer"
-            style="width:24px; height:24px"
+            style="width:48px; height:48px"
             contain
           />
         </q-btn>
