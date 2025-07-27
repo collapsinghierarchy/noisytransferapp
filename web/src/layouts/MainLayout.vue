@@ -11,7 +11,21 @@
           aria-label="Menu"
           @click="toggleLeftDrawer"
         />
-
+       <q-btn
+          flat
+          dense
+          round
+          to="/"
+          class="q-mr-sm"
+          aria-label="Home"
+        >
+          <q-img
+            src="icons/android-launchericon-48-48.png"
+            alt="NoisyTransfer"
+            style="width:24px; height:24px"
+            contain
+          />
+        </q-btn>
         <q-toolbar-title class="cursor-pointer" @click="goHome">
           Noisytransfer
         </q-toolbar-title>

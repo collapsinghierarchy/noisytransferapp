@@ -113,6 +113,7 @@ const canUseFS    = 'showOpenFilePicker' in window
 
 /* file + ui state */
 const file        = ref(null)
+let   sendStarted = false
 const shareLink   = ref('')
 const sas         = ref('')
 const progress    = ref(-1)
@@ -240,7 +241,10 @@ function handleVisibility () {
 
 /* ────────────────────────── react to file ref ──────────────── */
 watch(file, newFile => {
-  if (!newFile) return
+  // only react on the first time we get a File
+  if (!newFile || sendStarted) return
+  sendStarted = true
+
   Notify.create(`Loaded: “${newFile.name}”`)
   startSend()
 })
