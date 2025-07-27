@@ -20,7 +20,7 @@
           aria-label="Home"
         >
         <q-img
-            src="src/assets/android-launchericon-48-48.png"
+            src="assets/android-launchericon-48-48.png"
             alt="NoisyTransfer"
             style="width:48px; height:48px"
             contain
