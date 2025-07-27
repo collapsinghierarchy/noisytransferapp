@@ -9,7 +9,7 @@
       <div class="row items-center no-wrap">
         <!-- 1) hero icon / illustration -->
         <q-img
-          src="src/assets/logo.png"
+          src="assets/logo.png"
           alt="Secure share illustration"
           width="96px"
           height="96px"
