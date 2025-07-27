@@ -19,8 +19,6 @@ export default defineConfig((/* ctx */) => {
     css: [
       'app.scss'
     ],
-
-
     // https://github.com/quasarframework/quasar/tree/dev/extras
     extras: [
       // 'ionicons-v4',
@@ -80,9 +78,8 @@ export default defineConfig((/* ctx */) => {
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
     framework: {
       config: {
-        dark: true
+        dark: 'auto'
       },
-
       // iconet: 'material-icons', // Quasar icon set
       // lang: 'en-US', // Quasar language pack
 
@@ -140,7 +137,7 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: 'GenerateSW' // 'GenerateSW' or 'InjectManifest'
+      workboxMode: 'GenerateSW', // 'GenerateSW' or 'InjectManifest'
       // swFilename: 'sw.js',
       // manifestFilename: 'manifest.json',
       // extendManifestJson (json) {},
@@ -149,8 +146,28 @@ export default defineConfig((/* ctx */) => {
       // extendPWACustomSWConf (esbuildConf) {},
       // extendGenerateSWOptions (cfg) {},
       // extendInjectManifestOptions (cfg) {}
+      manifest: {
+        name: 'Noisytransfer',
+        short_name: 'Noisytransfer',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#027be3',
+         share_target: {              // ⬅︎ NEW
+          action : '/share-target',          // handled by the SW below
+          method : 'POST',
+          enctype: 'multipart/form-data',
+          params : {
+            title: 'title',
+            text : 'text',
+            files: [{
+              name  : 'file',         // <input name="file">
+              accept: ['*/*']         // or restrict to 'image/*' etc.
+            }]
+          }
+        }
+      }
     },
-
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-cordova-apps/configuring-cordova
     cordova: {
       // noIosLegacyBuildFlag: true, // uncomment only if you know what you are doing

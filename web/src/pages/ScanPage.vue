@@ -29,19 +29,42 @@
       />
     </div>
 
+        <!-- Always available -->
+    <q-btn
+      v-if="!scanning"
+      class="q-mt-xl"
+      color="secondary"
+      label="Send a file"
+      icon="send"
+      @click="goSend"
+    />
+
   </q-page>
 </template>
 
 <script setup>
 import { ref, nextTick, onBeforeUnmount } from 'vue'
 import { Platform, Notify } from 'quasar'
-import { useRouter } from 'vue-router'
+import { useRouter, onBeforeRouteLeave  } from 'vue-router'
 import { Html5Qrcode } from 'html5-qrcode'
 
 const router    = useRouter()
 const isMobile  = Platform.is.mobile
 const scanning  = ref(false)
 let   html5Scanner = null
+
+function goSend () {
+  // stop the camera before navigating
+  if (html5Scanner) {
+    html5Scanner
+      .stop()
+      .catch(() => {})
+      .finally(() => { router.push('/send') })
+  }
+  else {
+    router.push('/send')
+  }
+}
 
 // Fallback link input
 const shareLink = ref('')
@@ -118,8 +141,22 @@ async function startScan () {
 }
 
 onBeforeUnmount(() => {
-  if (html5Scanner && scanning.value) {
+  // always stop the camera if it’s running
+  if (html5Scanner) {
     html5Scanner.stop().catch(() => {})
+  }
+})
+
+// also catch any in‑page navigation (e.g. browser back/forward)
+onBeforeRouteLeave((to, from, next) => {
+  if (html5Scanner) {
+    html5Scanner
+      .stop()
+      .catch(() => {})
+      .finally(() => { next() })
+  }
+  else {
+    next()
   }
 })
 </script>

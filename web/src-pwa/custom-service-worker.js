@@ -28,3 +28,31 @@ if (process.env.MODE !== 'ssr' || process.env.PROD) {
     )
   )
 }
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+
+  if (url.pathname === '/share-target' && event.request.method === 'POST') {
+    // Redirect the navigation to your Send page
+    event.respondWith(Response.redirect('/#/send?fromShare=1', 303))
+
+    // Extract files and forward them to the client
+    event.waitUntil(handleShareTarget(event.request))
+  }
+})
+
+async function handleShareTarget(request) {
+  try {
+    const formData = await request.formData()
+    const files = formData.getAll('file') // "file" must match manifest.params.files[0].name
+
+    // You can post File objects directly in modern Chromium.
+    // If you need wider support, serialize to ArrayBuffers instead.
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const client of clientList) {
+      client.postMessage({ type: 'share-target-files', files })
+    }
+  } catch (err) {
+    console.error('[SW] share-target error', err)
+  }
+}

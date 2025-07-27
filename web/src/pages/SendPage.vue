@@ -45,6 +45,15 @@
       </template>
     </q-input>
 
+      <q-btn
+      v-if="isMobile && shareLink"
+      class="q-mt-md"
+      color="primary"
+      icon="share"
+      label="Share…"
+      @click="nativeShare"
+    />
+
    <div
         v-if="shareLink"
         class="q-mt-lg text-center"
@@ -83,13 +92,30 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
-import { Notify, copyToClipboard } from 'quasar'
+import { ref, watch, computed, onMounted }   from 'vue'
+import { Notify, copyToClipboard, Platform } from 'quasar'
 import { senderFlow, makeUUID } from 'src/lib/noise.js'
 import { useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
 
 const router = useRouter()
+const isMobile = Platform.is.mobile
+
+async function nativeShare () {
+  try {
+    await navigator.share?.({
+      title: 'Noisytransfer',
+      text : 'Receive my file securely',
+      url  : shareLink.value
+    })
+  } catch (err) {
+    if (err?.name !== 'AbortError') {
+      Notify.create({ type: 'negative', message: err.message })
+    }
+  }
+}
+
+
 /* ----------feature‑detect File System Access ---------- */
 const canUseFS = 'showOpenFilePicker' in window
 const file = ref(null)
@@ -123,6 +149,26 @@ function rejectTransfer() {
   rejected.value = true
   router.back()
 }
+
+onMounted(() => {
+  // Fallback for browsers that deliver via the SW message
+  navigator.serviceWorker?.addEventListener('message', (evt) => {
+    if (evt.data?.type === 'share-target-files') {
+      const incoming = evt.data.files
+      file.value = incoming[0]
+      Notify.create(`Received “${incoming[0].name}” via share sheet`)
+    }
+  })
+
+  // Optional: Launch Handler API (Chrome 113+)
+  if ('launchQueue' in window) {
+    launchQueue.setConsumer(async ({ files: lf }) => {
+      if (!lf?.length) return
+      file.value = lf[0]
+      Notify.create(`Received “${lf[0].name}” via share sheet`)
+    })
+  }
+})
 
 async function startSend() {
   if (!file.value) return
