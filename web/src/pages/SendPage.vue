@@ -99,110 +99,81 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted }   from 'vue'
-import { Notify, copyToClipboard, Platform } from 'quasar'
-import { senderFlow, makeUUID } from 'src/lib/noise.js'
-import { useRouter } from 'vue-router'
-import QrcodeVue from 'qrcode.vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter }  from 'vue-router'
+import { Notify }     from 'quasar'
+import { makeUUID, senderFlow } from 'src/lib/noise.js'
 
-const router = useRouter()
-const isMobile = Platform.is.mobile
+/* ------------------------------------------------------------------
+ * reactive state used in your page
+ * ---------------------------------------------------------------- */
+const file       = ref(null)     // the File object the user picked / shared
+const shareLink  = ref('')
+const sas        = ref('')
+const progress   = ref(-1)
+const confirmed  = ref(false)    // user pressed “Confirm” on the SAS dialog
 
-async function nativeShare () {
-  try {
-    await navigator.share?.({
-      title: 'Noisytransfer',
-      text : 'Receive my file securely',
-      url  : shareLink.value
-    })
-  } catch (err) {
-    if (err?.name !== 'AbortError') {
-      Notify.create({ type: 'negative', message: err.message })
+/* ------------------------------------------------------------------
+ * book‑keeping for restarting / cancelling the flow
+ * ---------------------------------------------------------------- */
+let   flowCancel = () => {}      // no‑op until senderFlow sets it
+const channelID  = makeUUID()    // keep the same UUID between restarts
+
+/* ------------------------------------------------------------------
+ * function to start (or restart) the sender flow
+ * ---------------------------------------------------------------- */
+function startSend () {
+  if (!file.value) return         // nothing to do
+
+  // 1) cancel any previous run
+  flowCancel()
+
+  // 2) launch a fresh senderFlow
+  const cancelHandle = senderFlow(
+    useRouter(),
+    file.value,
+    channelID,
+    {
+      onShareLink: link => shareLink.value = link,
+      onSAS      : code => sas.value  = code,
+      waitConfirm: () =>
+        new Promise(res => {
+          const stop = watch(confirmed, ok => {
+            if (ok) { stop(); res() }
+          })
+        }),
+      onProgress: pct => progress.value = pct,
+      onDone   : ()  => Notify.create('Transfer complete'),
+      onError  : err => Notify.create({ type: 'negative', message: err.toString() })
     }
-  }
+  )
+
+  // 3) remember how to cancel it next time
+  flowCancel = cancelHandle.cancel ?? (() => {})
 }
 
-/* ----------feature‑detect File System Access ---------- */
-const canUseFS = 'showOpenFilePicker' in window
-const file = ref(null)
-
-/* ----------modern file picker ---------- */
-async function chooseFile () {
-  try {
-     const [handle] = await window.showOpenFilePicker({
-        id: 'noisytransfer'   // (optional) keeps a sticky picker directory
-      })
-    file.value = await handle.getFile()
-  } catch (err) {
-    if (err?.name !== 'AbortError') {
-      Notify.create({ type: 'negative', message: err.message })
-    }
-  }
-}
-
-const shareLink = ref('')
-const sas = ref('')
-const progress = ref(-1)
-const confirmed = ref(false)
-const rejected = ref(false)
-
-const showSasDialog = computed(() => !!sas.value && !confirmed.value && !rejected.value)
-
-// watch for any incoming shared file and notify / trigger send
-watch(file, newFile => {
-  if (!newFile) return
-    Notify.create(`Loaded via share: “${newFile.name}”`)
-    startSend()
-  
-})
-
-
-function confirmTransfer() {
-  confirmed.value = true
-}
-function rejectTransfer() {
-  rejected.value = true
-  router.back()
-}
-
+/* ------------------------------------------------------------------
+ * lifecycle: start once, then auto‑restart on foreground *until* SAS confirmed
+ * ---------------------------------------------------------------- */
 onMounted(() => {
-  // Fallback for browsers that deliver via the SW message
-  navigator.serviceWorker?.addEventListener('message', (evt) => {
-    if (evt.data?.type === 'share-target-files') {
-      const incoming = evt.data.files
-      file.value = incoming[0]
-      Notify.create(`Received “${incoming[0].name}” via share sheet`)
-    }
-  })
+  if (file.value) startSend()   // first kick‑off
 
-  // Optional: Launch Handler API (Chrome 113+)
-  if ('launchQueue' in window) {
-    launchQueue.setConsumer(async ({ files: lf }) => {
-      if (!lf?.length) return
-      file.value = lf[0]
-      Notify.create(`Received “${lf[0].name}” via share sheet`)
-    })
-  }
+  document.addEventListener('visibilitychange', handleVisibility, false)
 })
 
-async function startSend() {
-  if (!file.value) return
-  const channelID = makeUUID();
-  senderFlow(router, file.value, channelID, {
-    onShareLink: link => shareLink.value = link,
-    onSAS: code => sas.value = code,
-    waitConfirm: () => new Promise(res => {
-      const stop = watch(confirmed, v => { if (v) { stop(); res() } })
-    }),
-    onProgress: pct => progress.value = pct,
-    onDone: () => Notify.create({ type: 'positive', message: 'Transfer complete' }),
-    onError: err => Notify.create({ type: 'negative', message: err.toString() })
-  })
-}
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', handleVisibility, false)
+  flowCancel()
+})
 
-async function copyLink() {
-  await copyToClipboard(shareLink.value)
-  Notify.create('Link copied')
+function handleVisibility () {
+  if (
+    document.visibilityState === 'visible' &&
+    file.value &&
+    !confirmed.value         // we haven’t confirmed SAS yet
+  ) {
+    startSend()              // restart the whole flow
+  }
 }
 </script>
 
