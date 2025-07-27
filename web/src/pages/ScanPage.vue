@@ -1,6 +1,34 @@
 <template>
   <q-page padding class="column items-center justify-center">
 
+        <q-card
+      flat
+      bordered
+      class="hero-card q-pa-lg q-mb-xl"
+    > 
+      <div class="row items-center no-wrap">
+        <!-- 1) hero icon / illustration -->
+        <q-img
+          src="src/assets/logo.png"
+          alt="Secure share illustration"
+          width="96px"
+          height="96px"
+          class="q-mr-lg"
+          contain
+        />
+
+         <!-- 2) headline + subline -->
+        <div class="column">
+          <div class="text-h5 text-weight-bold q-mb-xs">
+            Beam files privately in seconds
+          </div>
+          <div class="text-body1">
+            Scan a QR or share a single link; end‑to‑end encrypted, quantum-safe, no passwords, no cloud.
+          </div>
+        </div>
+      </div>
+    </q-card>
+
     <!-- Mobile only: scan via camera -->
     <q-btn
       v-if="isMobile && !scanning"
