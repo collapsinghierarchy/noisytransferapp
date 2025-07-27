@@ -99,65 +99,127 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter }  from 'vue-router'
-import { Notify }     from 'quasar'
-import { makeUUID, senderFlow } from 'src/lib/noise.js'
+/* ────────────────────────── imports ────────────────────────── */
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Notify, copyToClipboard, Platform } from 'quasar'
+import { senderFlow, makeUUID } from 'src/lib/noise.js'
+import { useRouter } from 'vue-router'
+import QrcodeVue from 'qrcode.vue'
 
-/* ------------------------------------------------------------------
- * reactive state used in your page
- * ---------------------------------------------------------------- */
-const file       = ref(null)     // the File object the user picked / shared
-const shareLink  = ref('')
-const sas        = ref('')
-const progress   = ref(-1)
-const confirmed  = ref(false)    // user pressed “Confirm” on the SAS dialog
+/* ────────────────────────── constants & refs ───────────────── */
+const router      = useRouter()
+const isMobile    = Platform.is.mobile
+const canUseFS    = 'showOpenFilePicker' in window
 
-/* ------------------------------------------------------------------
- * book‑keeping for restarting / cancelling the flow
- * ---------------------------------------------------------------- */
-let   flowCancel = () => {}      // no‑op until senderFlow sets it
-const channelID  = makeUUID()    // keep the same UUID between restarts
+/* file + ui state */
+const file        = ref(null)
+const shareLink   = ref('')
+const sas         = ref('')
+const progress    = ref(-1)
+const confirmed   = ref(false)
+const rejected    = ref(false)
 
-/* ------------------------------------------------------------------
- * function to start (or restart) the sender flow
- * ---------------------------------------------------------------- */
+/* show SAS dialog only between reveal and confirm/reject */
+const showSasDialog = computed(
+  () => !!sas.value && !confirmed.value && !rejected.value
+)
+
+/* ────────────────────────── flow restart bookkeeping ───────── */
+let   flowCancel  = () => {}            // will be replaced by senderFlow
+const channelID   = makeUUID()          // same UUID across restarts
+
+/* ────────────────────────── helpers ────────────────────────── */
+async function nativeShare () {
+  try {
+    await navigator.share?.({
+      title: 'Noisytransfer',
+      text : 'Receive my file securely',
+      url  : shareLink.value
+    })
+  } catch (err) {
+    if (err?.name !== 'AbortError') {
+      Notify.create({ type: 'negative', message: err.message })
+    }
+  }
+}
+
+async function chooseFile () {
+  try {
+    const [handle] = await window.showOpenFilePicker({ id: 'noisytransfer' })
+    file.value = await handle.getFile()
+  } catch (err) {
+    if (err?.name !== 'AbortError') {
+      Notify.create({ type: 'negative', message: err.message })
+    }
+  }
+}
+
+async function copyLink () {
+  await copyToClipboard(shareLink.value)
+  Notify.create('Link copied')
+}
+
+function confirmTransfer () { confirmed.value = true }
+function rejectTransfer  () {
+  rejected.value = true
+  router.back()
+}
+
+/* ────────────────────────── senderFlow launcher ────────────── */
 function startSend () {
-  if (!file.value) return         // nothing to do
+  if (!file.value) return
 
-  // 1) cancel any previous run
-  flowCancel()
+  /* 1️⃣ cancel any previous run (if senderFlow supplies .cancel) */
+  flowCancel?.()
 
-  // 2) launch a fresh senderFlow
+  /* 2️⃣ launch a fresh senderFlow */
   const cancelHandle = senderFlow(
-    useRouter(),
+    router,
     file.value,
     channelID,
     {
-      onShareLink: link => shareLink.value = link,
-      onSAS      : code => sas.value  = code,
+      onShareLink: link => (shareLink.value = link),
+      onSAS      : code => (sas.value       = code),
       waitConfirm: () =>
         new Promise(res => {
           const stop = watch(confirmed, ok => {
             if (ok) { stop(); res() }
           })
         }),
-      onProgress: pct => progress.value = pct,
-      onDone   : ()  => Notify.create('Transfer complete'),
+      onProgress: pct => (progress.value = pct),
+      onDone   : ()  => Notify.create({ type: 'positive', message: 'Transfer complete' }),
       onError  : err => Notify.create({ type: 'negative', message: err.toString() })
     }
   )
 
-  // 3) remember how to cancel it next time
-  flowCancel = cancelHandle.cancel ?? (() => {})
+  /* 3️⃣ remember how to cancel it next time (if provided) */
+  flowCancel = cancelHandle?.cancel ?? (() => {})
 }
 
-/* ------------------------------------------------------------------
- * lifecycle: start once, then auto‑restart on foreground *until* SAS confirmed
- * ---------------------------------------------------------------- */
+/* ────────────────────────── lifecycle wiring ───────────────── */
 onMounted(() => {
-  if (file.value) startSend()   // first kick‑off
+  /* first kick‑off if user had already picked / shared a file */
+  if (file.value) startSend()
 
+  /* Service‑worker share‑target fallback */
+  navigator.serviceWorker?.addEventListener('message', evt => {
+    if (evt.data?.type === 'share-target-files') {
+      const incoming = evt.data.files
+      file.value = incoming[0]
+      Notify.create(`Received “${incoming[0].name}” via share sheet`)
+    }
+  })
+
+  /* Launch‑Queue API (Chrome / Edge 113+) */
+  if ('launchQueue' in window) {
+    launchQueue.setConsumer(async ({ files: lf }) => {
+      if (!lf?.length) return
+      file.value = lf[0]
+      Notify.create(`Received “${lf[0].name}” via share sheet`)
+    })
+  }
+
+  /* Auto‑restart while SAS not yet confirmed */
   document.addEventListener('visibilitychange', handleVisibility, false)
 })
 
@@ -170,11 +232,18 @@ function handleVisibility () {
   if (
     document.visibilityState === 'visible' &&
     file.value &&
-    !confirmed.value         // we haven’t confirmed SAS yet
+    !confirmed.value
   ) {
-    startSend()              // restart the whole flow
+    startSend()                 // restart entire flow
   }
 }
+
+/* ────────────────────────── react to file ref ──────────────── */
+watch(file, newFile => {
+  if (!newFile) return
+  Notify.create(`Loaded: “${newFile.name}”`)
+  startSend()
+})
 </script>
 
 <style scoped lang="scss">
