@@ -32,14 +32,6 @@
       <span>{{ file.name }}</span>
     </div>
 </div>
-  <q-btn
-    label="Start Pairing"
-    icon="link"
-    class="app-btn app-btn-primary app-action"
-    :disable="!file"
-    @click="startSend"
-  />
-
     <q-input
       v-if="shareLink"
       v-model="shareLink"
