@@ -57,12 +57,10 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
+import { ref } from 'vue'
 import { useRouter }   from 'vue-router'
 import { Notify }      from 'quasar'
-
-// inject the provided pendingFile ref
-const pendingFile = inject('pendingFile')
+import { pendingFile } from 'src/stores/pendingFile'
 
 // local v‑model for q‑file
 const localFile = ref(null)
