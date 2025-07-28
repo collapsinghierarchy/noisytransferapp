@@ -1,13 +1,9 @@
 <template>
   <q-page padding class="column items-center justify-center">
 
-        <q-card
-      flat
-      bordered
-      class="hero-card q-pa-lg q-mb-xl"
-    > 
+    <!-- Hero card -->
+    <q-card flat bordered class="hero-card q-pa-lg q-mb-xl">
       <div class="row items-center no-wrap">
-        <!-- 1) hero icon / illustration -->
         <q-img
           src="src/assets/logo.png"
           alt="Secure share illustration"
@@ -16,58 +12,47 @@
           class="q-mr-lg"
           contain
         />
-
-         <!-- 2) headline + subline -->
         <div class="column">
           <div class="text-h5 text-weight-bold q-mb-xs">
             Beam files privately in seconds
           </div>
           <div class="text-body1">
-            Scan a QR or share a single link; end‑to‑end encrypted, quantum-safe, no passwords, no cloud.
+            Scan a QR or share a single link; end‑to‑end encrypted, quantum‑safe, no passwords, no cloud.
           </div>
         </div>
       </div>
     </q-card>
 
-    <!-- Mobile only: scan via camera -->
-    <q-btn
-      v-if="isMobile && !scanning"
-      label="Scan QR Code"
-      icon="qr_code_scanner"
-      color="primary"
-      @click="startScan"
-    />
+    <!-- When not scanning yet: show both picker & scan buttons -->
+    <div v-if="!scanning" class="column items-center full-width q-gutter-lg">
 
-       <q-file
-          v-if="!scanning"
-          v-model="localFile"
-          accept="*/*"
-          label="Choose from device"
-          class="big-btn"
-          filled
-          outlined
-          bottom-slots
-          @update:model-value="pickDirect"
-        />
-
-   <div v-if="scanning" id="qr-reader"></div>
-
-    <!-- Desktop / fallback input -->
-    <div v-else-if="!isMobile" class="full-width column items-center">
-      <q-input
-        v-model="shareLink"
-        label="Enter share link"
-        class="full-width app-input"
-        @keyup.enter="goToLink"
+      <!-- File picker CTA -->
+      <q-file
+        v-model="localFile"
+        accept="*/*"
+        label="Choose from device"
+        class="big-btn full-width"
+        filled
+        outlined
+        bottom-slots
+        @update:model-value="pickDirect"
       />
+
+      <!-- Scan‑QR CTA -->
       <q-btn
-        label="Go"
+        label="Scan QR Code"
+        icon="qr_code_scanner"
+        class="big-btn full-width"
+        unelevated
         color="primary"
-        class="q-mt-sm"
-        @click="goToLink"
-        :disable="!shareLink"
+        @click="startScan"
       />
+
     </div>
+
+    <!-- QR‑reader container when scanning -->
+    <div v-else id="qr-reader"></div>
+
   </q-page>
 </template>
 
@@ -78,7 +63,6 @@ import { useRouter, onBeforeRouteLeave  } from 'vue-router'
 import { Html5Qrcode } from 'html5-qrcode'
 
 const pendingFile = inject('pendingFile', ref(null))
-const localFile   = ref(null)
 const router      = useRouter()
 
 function goSend () {
@@ -94,14 +78,14 @@ function goSend () {
   }
 }
 
-/* handle picker */
 function pickDirect (files) {
   if (!files) return
   const f = Array.isArray(files) ? files[0] : files
   if (!f) return
 
   pendingFile.value = f
-  Notify.create(`Loaded “${f.name}”`)
+  Notify.create(`Loaded “${ f.name }”`)
+  // navigate to send flow
   goSend()
 }
 
