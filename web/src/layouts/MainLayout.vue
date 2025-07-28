@@ -69,10 +69,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { provide, ref } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+
+const pendingFile = ref(null)
+provide('pendingFile', pendingFile)
 
 const $q = useQuasar()
 

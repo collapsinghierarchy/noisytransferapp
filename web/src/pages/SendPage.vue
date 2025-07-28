@@ -92,11 +92,13 @@
 
 <script setup>
 /* ────────────────────────── imports ────────────────────────── */
-import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { inject, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Notify, copyToClipboard, Platform } from 'quasar'
 import { senderFlow, makeUUID } from 'src/lib/noise.js'
 import { useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
+
+const pendingFile = inject('pendingFile', ref(null))
 
 /* ────────────────────────── constants & refs ───────────────── */
 const router      = useRouter()
@@ -189,10 +191,22 @@ function startSend () {
   flowCancel = cancelHandle?.cancel ?? (() => {})
 }
 
+/* ── single watcher drives the send flow ── */
+watch(file, newFile => {
+  // newFile is the File instance (or null)
+  if (!newFile || sendStarted) return
+
+  sendStarted = true
+  Notify.create(`Loaded: “${ newFile.name }”`)
+  startSend()
+})
+
 /* ────────────────────────── lifecycle wiring ───────────────── */
 onMounted(() => {
-  /* first kick‑off if user had already picked / shared a file */
-  if (file.value) startSend()
+  if (pendingFile && pendingFile.value) {
+      file.value = pendingFile.value
+      pendingFile.value = null
+    }
 
   /* Service‑worker share‑target fallback */
   navigator.serviceWorker?.addEventListener('message', evt => {
@@ -230,16 +244,6 @@ function handleVisibility () {
     startSend()                 // restart entire flow
   }
 }
-
-/* ────────────────────────── react to file ref ──────────────── */
-watch(file, newFile => {
-  // only react on the first time we get a File
-  if (!newFile || sendStarted) return
-  sendStarted = true
-
-  Notify.create(`Loaded: “${newFile.name}”`)
-  startSend()
-})
 </script>
 
 <style scoped lang="scss">

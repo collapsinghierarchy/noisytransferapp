@@ -16,28 +16,33 @@
           class="q-mr-lg"
           contain
         />
-
          <!-- 2) headline + subline -->
         <div class="column">
           <div class="text-h5 text-weight-bold q-mb-xs">
             Beam files privately in seconds
           </div>
           <div class="text-body1">
-            Scan a QR or share a single link; end‑to‑end encrypted, quantum-safe, no passwords, no cloud.
+            Scan a QR or share a single link; end‑to‑end encrypted, quantum-safe, no passwords, no cloud. 
+            Just drop a file below and scan with your smartphone or share the link. Secure against Shoulder-Surfing and any Man-in-the-Middle.
+          </div>
+            <div class="text-body1">
+            Just drop a file below and scan with your smartphone or share the link. Secure against Shoulder-Surfing and any Man-in-the-Middle.
           </div>
         </div>
       </div>
     </q-card>
-
-      <q-btn
-        to="/send"
-        unelevated
-        size="xl"
-        icon="send"
-        label="Send a File"
-        class="big-btn"
-        color="primary"
+<div class="full-width q-mb-xl">
+      <q-file
+        v-model="localFile"
+        accept="*/*"
+        label="Choose from device"
+        class="big-btn full-width"
+        filled
+        outlined
+        bottom-slots
+        @update:model-value="pickDirect"
       />
+    </div>
 
       <q-btn
         to="/request"
@@ -53,7 +58,29 @@
 </template>
 
 <script setup>
-// nothing to do
+import { ref, inject } from 'vue'
+import { useRouter }   from 'vue-router'
+import { Notify }      from 'quasar'
+
+// inject the provided pendingFile ref
+const pendingFile = inject('pendingFile')
+
+// local v‑model for q‑file
+const localFile = ref(null)
+const router    = useRouter()
+
+function pickDirect (files) {
+  // Quasar sends either a File or an Array of Files
+  if (!files) return
+
+  // normalize to a single File
+  const f = Array.isArray(files) ? files[0] : files
+  if (!f) return
+
+  pendingFile.value = f
+  Notify.create(`Loaded “${ f.name }”`)
+  router.push('/send')
+}
 </script>
 
 <style scoped lang="scss">
