@@ -38,6 +38,18 @@
       @click="startScan"
     />
 
+       <q-file
+          v-if="!scanning"
+          v-model="localFile"
+          accept="*/*"
+          label="Choose from device"
+          class="big-btn"
+          filled
+          outlined
+          bottom-slots
+          @update:model-value="pickDirect"
+        />
+
    <div v-if="scanning" id="qr-reader"></div>
 
     <!-- Desktop / fallback input -->
@@ -56,27 +68,30 @@
         :disable="!shareLink"
       />
     </div>
-
-        <!-- Always available -->
-    <q-btn
-      v-if="!scanning"
-      class="q-mt-xl"
-      color="secondary"
-      label="Send a file"
-      icon="send"
-      @click="goSend"
-    />
-
   </q-page>
 </template>
 
 <script setup>
-import { ref, nextTick, onBeforeUnmount } from 'vue'
+import { ref, nextTick, onBeforeUnmount, inject  } from 'vue'
 import { Platform, Notify } from 'quasar'
 import { useRouter, onBeforeRouteLeave  } from 'vue-router'
 import { Html5Qrcode } from 'html5-qrcode'
 
-const router    = useRouter()
+const pendingFile = inject('pendingFile', ref(null))
+const localFile   = ref(null)
+const router      = useRouter()
+
+/* handle picker */
+function pickDirect (files) {
+  if (!files) return
+  const f = Array.isArray(files) ? files[0] : files
+  if (!f) return
+
+  pendingFile.value = f
+  Notify.create(`Loaded “${f.name}”`)
+  router.push('/send')
+}
+
 const isMobile  = Platform.is.mobile
 const scanning  = ref(false)
 let   html5Scanner = null
@@ -200,6 +215,19 @@ onBeforeRouteLeave((to, from, next) => {
   border: 2px solid var(--q-color-primary);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.big-btn {
+  min-width: 80vw;
+  min-height: 130px;
+  font-size: 1.5rem;
+  border-radius: 20px;
+  transition: transform .2s, box-shadow .2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  }
 }
 
 </style>
