@@ -40,6 +40,7 @@
 
       <!-- Scan‑QR CTA -->
       <q-btn
+        v-if="isMobile && !scanning"
         label="Scan QR Code"
         icon="qr_code_scanner"
         class="big-btn full-width"
@@ -93,16 +94,7 @@ const isMobile  = Platform.is.mobile
 const scanning  = ref(false)
 let   html5Scanner = null
 
-// Fallback link input
-const shareLink = ref('')
-
 Notify.create('Welcome')
-
-function goToLink() {
-  if (shareLink.value) {
-    router.push(shareLink.value)
-  }
-}
 
 async function startScan () {
   console.log('▶ startScan pressed')
