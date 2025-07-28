@@ -58,12 +58,12 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onBeforeUnmount, inject  } from 'vue'
+import { ref, nextTick, onBeforeUnmount } from 'vue'
 import { Platform, Notify } from 'quasar'
 import { useRouter, onBeforeRouteLeave  } from 'vue-router'
 import { Html5Qrcode } from 'html5-qrcode'
+import { pendingFile } from 'src/stores/pendingFile'
 
-const pendingFile = inject('pendingFile', ref(null))
 const router      = useRouter()
 
 function goSend () {

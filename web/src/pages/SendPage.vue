@@ -92,13 +92,12 @@
 
 <script setup>
 /* ────────────────────────── imports ────────────────────────── */
-import { inject, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Notify, copyToClipboard, Platform } from 'quasar'
 import { senderFlow, makeUUID } from 'src/lib/noise.js'
 import { useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
-
-const pendingFile = inject('pendingFile', ref(null))
+import { pendingFile } from 'src/stores/pendingFile'
 
 /* ────────────────────────── constants & refs ───────────────── */
 const router      = useRouter()
@@ -189,6 +188,7 @@ function startSend () {
 
   /* 3️⃣ remember how to cancel it next time (if provided) */
   flowCancel = cancelHandle?.cancel ?? (() => {})
+  sendStarted = false
 }
 
 /* ── single watcher drives the send flow ── */
@@ -239,7 +239,8 @@ function handleVisibility () {
   if (
     document.visibilityState === 'visible' &&
     file.value &&
-    !confirmed.value
+    !confirmed.value &&
+    !sendStarted
   ) {
     startSend()                 // restart entire flow
   }
