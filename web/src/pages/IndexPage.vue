@@ -23,7 +23,6 @@
           </div>
           <div class="text-body1">
             Scan a QR or share a single link; end‑to‑end encrypted, quantum-safe, no passwords, no cloud. 
-            Just drop a file below and scan with your smartphone or share the link. Secure against Shoulder-Surfing and any Man-in-the-Middle.
           </div>
             <div class="text-body1">
             Just drop a file below and scan with your smartphone or share the link. Secure against Shoulder-Surfing and any Man-in-the-Middle.
