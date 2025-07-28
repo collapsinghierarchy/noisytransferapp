@@ -203,7 +203,7 @@ function startSend () {
 watch(file, newFile => {
   // newFile is the File instance (or null)
   if (!newFile || sendStarted) return
-  Notify.create(`Loaded: “${ newFile.name }”`)
+  Notify.create(`Send Setup Started for: “${ newFile.name }”`)
   startSend()
 })
 
