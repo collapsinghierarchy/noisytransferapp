@@ -81,21 +81,6 @@ const pendingFile = inject('pendingFile', ref(null))
 const localFile   = ref(null)
 const router      = useRouter()
 
-/* handle picker */
-function pickDirect (files) {
-  if (!files) return
-  const f = Array.isArray(files) ? files[0] : files
-  if (!f) return
-
-  pendingFile.value = f
-  Notify.create(`Loaded “${f.name}”`)
-  router.push('/send')
-}
-
-const isMobile  = Platform.is.mobile
-const scanning  = ref(false)
-let   html5Scanner = null
-
 function goSend () {
   // stop the camera before navigating
   if (html5Scanner) {
@@ -108,6 +93,21 @@ function goSend () {
     router.push('/send')
   }
 }
+
+/* handle picker */
+function pickDirect (files) {
+  if (!files) return
+  const f = Array.isArray(files) ? files[0] : files
+  if (!f) return
+
+  pendingFile.value = f
+  Notify.create(`Loaded “${f.name}”`)
+  goSend()
+}
+
+const isMobile  = Platform.is.mobile
+const scanning  = ref(false)
+let   html5Scanner = null
 
 // Fallback link input
 const shareLink = ref('')
