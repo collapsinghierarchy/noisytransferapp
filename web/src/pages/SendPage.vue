@@ -97,7 +97,7 @@ import { Notify, copyToClipboard, Platform } from 'quasar'
 import { senderFlow, makeUUID } from 'src/lib/noise.js'
 import { useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
-import { pendingFile } from 'src/stores/pendingFile'
+import { pendingFile } from 'src/stores/pendingFile.js'
 
 /* ────────────────────────── constants & refs ───────────────── */
 const router      = useRouter()
@@ -203,8 +203,6 @@ function startSend () {
 watch(file, newFile => {
   // newFile is the File instance (or null)
   if (!newFile || sendStarted) return
-
-  sendStarted = true
   Notify.create(`Loaded: “${ newFile.name }”`)
   startSend()
 })
