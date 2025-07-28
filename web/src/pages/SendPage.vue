@@ -161,8 +161,8 @@ function rejectTransfer  () {
 
 /* ────────────────────────── senderFlow launcher ────────────── */
 function startSend () {
-  if (!file.value) return
-
+  if (!file.value || sendStarted) return 
+  sendStarted = true
   /* 1️⃣ cancel any previous run (if senderFlow supplies .cancel) */
   flowCancel?.()
 
@@ -181,14 +181,22 @@ function startSend () {
           })
         }),
       onProgress: pct => (progress.value = pct),
-      onDone   : ()  => Notify.create({ type: 'positive', message: 'Transfer complete' }),
-      onError  : err => Notify.create({ type: 'negative', message: err.toString() })
+      onDone   : ()  => {
+        sendStarted = false
+        Notify.create({ type: 'positive', message: 'Transfer complete' })
+      },
+      onError  : err => {
+        sendStarted = false
+        Notify.create({ type: 'negative', message: err.toString() })
+      }
     }
   )
 
   /* 3️⃣ remember how to cancel it next time (if provided) */
-  flowCancel = cancelHandle?.cancel ?? (() => {})
-  sendStarted = false
+  flowCancel = () => {
+     cancelHandle?.cancel?.()
+     sendStarted = false
+   }
 }
 
 /* ── single watcher drives the send flow ── */
