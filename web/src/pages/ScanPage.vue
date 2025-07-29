@@ -22,6 +22,30 @@
         </div>
       </div>
     </q-card>
+    <!-- ⚠️ Experimental‑state notice -->
+    <q-card
+      flat
+      bordered
+      class="hero-card q-pa-lg q-mb-xl notice-card"
+    >
+      <div class="row items-start no-wrap">
+        <q-icon
+          name="warning"
+          class="notice-icon q-mr-lg"
+          size="48px"
+        />
+        <div class="column">
+          <div class="text-h6 text-weight-bold q-mb-xs">
+            Experimental preview
+          </div>
+          <div class="text-body2">
+            This build is still in active development and may change at any time.
+            If something stops working, please clear your browser cache
+            and reload the page.
+          </div>
+        </div>
+      </div>
+    </q-card>
 
     <!-- When not scanning yet: show both picker & scan buttons -->
     <div v-if="!scanning" class="column items-center full-width q-gutter-lg">
@@ -203,6 +227,32 @@ onBeforeRouteLeave((to, from, next) => {
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  }
+}
+
+/* Notice‑card theme — adapts to $q.dark */
+.notice-card {
+  /* shared surface tweaks */
+  border-width: 1px;
+  border-radius: 12px;
+
+  /* light‑mode colours */
+  background: #fff8e1;      /* amber‑50 */
+  color: #5d3700;           /* deep amber‑900 */
+}
+
+.notice-icon {
+  color: #f57c00;           /* amber‑600 */
+}
+
+/* dark‑mode override */
+body.body--dark {
+  .notice-card {
+    background: #2b2b2b;    /* near‑black but not full */
+    color: #ffb74d;         /* amber‑300 text for high contrast */
+  }
+  .notice-icon {
+    color: #ffb74d;         /* same accent for icon */
   }
 }
 
